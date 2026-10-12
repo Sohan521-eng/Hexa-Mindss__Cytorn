@@ -26,6 +26,7 @@
    - 2.11 [Phase 11: Satellite AI Pattern Studio, Grad-CAM & Scientific Export Hub](#211-phase-11-satellite-ai-pattern-studio-grad-cam--scientific-export-hub)
    - 2.12 [Phase 12: Interactive Navigation Ecosystem, GSAP Micro-Interactions & Action Cards Alignment](#212-phase-12-interactive-navigation-ecosystem-gsap-micro-interactions--action-cards-alignment)
    - 2.13 [Phase 13: Trajectory & Intensity Prediction Center (/forecast), Navbar Overlap Fix & UI Polish](#213-phase-13-trajectory--intensity-prediction-center-forecast-navbar-overlap-fix--ui-polish)
+   - 2.14 [Phase 14: Disaster Early Warning & Coastal Alert Hub (/alerts) — 5 Core Decision Modules & CAP Grid](#214-phase-14-disaster-early-warning--coastal-alert-hub-alerts)
 3. [Technology Stack & Dependency Inventory](#3-technology-stack--dependency-inventory)
 4. [Design System & Visual Identity Architecture](#4-design-system--visual-identity-architecture)
    - 4.1 [The 60-30-10 Golden Ratio Color Balance](#41-the-60-30-10-golden-ratio-color-balance)
@@ -42,12 +43,14 @@
    - 6.6 [Map Rendering Canvas (`src/components/map/`)](#66-map-rendering-canvas)
    - 6.7 [Cyclone AI Assistant & Explainability Layer (`src/components/xai/`)](#67-cyclone-ai-assistant--explainability-layer)
    - 6.8 [Forecast Prediction Center Components (`src/components/forecast/`)](#68-forecast-prediction-center-components-srccomponentsforecast)
+   - 6.9 [Disaster Alert Hub Components (`src/components/alerts/`)](#69-disaster-alert-hub-components-srccomponentsalerts)
 7. [Routing Architecture & Page Walkthroughs](#7-routing-architecture--page-walkthroughs)
    - 7.1 [Root Public Landing Page (`/`)](#71-root-public-landing-page-)
    - 7.2 [Operational Geospatial Dashboard (`/dashboard`)](#72-operational-geospatial-dashboard-dashboard)
    - 7.3 [AI Satellite Analyzer & Pattern Studio (`/satellite-analyzer`)](#73-ai-satellite-analyzer--pattern-studio-satellite-analyzer)
    - 7.4 [Trajectory & Intensity Prediction Center (`/forecast`)](#74-trajectory--intensity-prediction-center-forecast)
-   - 7.5 [Authentication & Role Verification (`/login`, `/register`)](#75-authentication--role-verification-login-register)
+   - 7.5 [Disaster Early Warning & Coastal Alert Hub (`/alerts`)](#75-disaster-early-warning--coastal-alert-hub-alerts)
+   - 7.6 [Authentication & Role Verification (`/login`, `/register`)](#76-authentication--role-verification-login-register)
 8. [Global State Management Architecture (Zustand Stores)](#8-global-state-management-architecture)
 9. [Data Domain Models, TypeScript Contracts & API Client](#9-data-domain-models-typescript-contracts--api-client)
 10. [Animation Physics & Mathematical Implementations](#10-animation-physics--mathematical-implementations)
@@ -149,6 +152,20 @@ The frontend is built to shatter standard academic dashboard tropes. It synthesi
 │ • Updated DashboardPill.tsx: shortened "Landing Page" label to "Landing" for compact navbar footprint          │
 │ • Fixed NwpComparisonMatrix.tsx: whitespace-nowrap + inline-flex to prevent badge line-break in narrow panels  │
 │ • Generalized export button labels: "Export GeoJSON", "Export Shapefile", "Export CSV"                        │
+│                                                                                                                 │
+│ [Phase 14: Disaster Early Warning & Coastal Alert Hub (/alerts) — 5 Core Decision Modules & CAP Grid]           │
+│ • Built complete `/alerts` page (Page 6) EOC dashboard with 5-section high-density responsive layout           │
+│ • Built `AlertsTopBar.tsx`: Incident Commander #4812 auth badge, storm & state filters, EOC hotline 1078       │
+│ • Built `ImdWarningBanner.tsx`: Official IMD 4-stage alert horizon, countdown clock, surge & landfall telemetry│
+│ • Built `CoastalInundationMap.tsx`: 2D GIS Bay of Bengal canvas, 0.5m-5m surge contours, infrastructure HUD    │
+│ • Built `DistrictVulnerabilityMatrix.tsx`: Searchable/sortable table, severity & immediate evac priority scores│
+│ • Built `MultiLingualBulletinGenerator.tsx`: Instant AI bulletins in 7 languages (EN/HI/BN/OR/TA/TE/GU) + PDF   │
+│ • Built `CapBroadcastSimulator.tsx`: Role-guarded ITU-T X.1303 CAP-XML & citizen mobile cell broadcast preview │
+│ • Built `EvacuationOrderModal.tsx`: Legal order pre-fill, 0-2km/2-5km/5-10km zones, bus fleet & curfew control │
+│ • Built `Broadcast2FaModal.tsx`: 2FA confirmation gate, cell tower cluster selection & simulated OTP token     │
+│ • Built `BulletinPdfModal.tsx`: Official Government of India / IMD letterhead preview with download trigger    │
+│ • Built `AlertsFooterActions.tsx`: Downstream pipeline handoff to Page 9 (/digital-twin) and Page 11 (/grid)   │
+│ • Built `alertsData.ts` & `types.ts`: Multi-state district models, 7 language translations, CAP-XML & SOP data │
 └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -239,6 +256,20 @@ The project transitioned from the Vite prototype to a full production architectu
 - **DashboardPill Label Shrink (`DashboardPill.tsx`)**: Shortened `targetLabel` from `"Landing Page"` to `"Landing"` for a more compact navbar footprint.
 - **NwpComparisonMatrix Badge Fix**: Added `whitespace-nowrap` and `inline-flex items-center justify-center` to all error cells and the AI badge span, plus `min-w-[560px]` on the table, to prevent `38 km` from line-breaking in narrow panels.
 - **Export Button Label Generalization (`PipelineHandoffExport.tsx`)**: Replaced `GeoJSON (.geojson)`, `ESRI Shapefile (.zip)`, and `CSV Table (.csv)` with clean action-oriented generic labels: `Export GeoJSON`, `Export Shapefile`, `Export CSV`.
+
+### 2.14 Phase 14: Disaster Early Warning & Coastal Alert Hub (/alerts)
+- **Complete `/alerts` Emergency Operations Center (Page 6):** Built from scratch as the unified life-safety command hub for NDMA, SDMAs (OSDMA, WBDMA, APSDMA, TNDMA, GSDMA), and coastal district magistrates. Ingests cyclone trajectory and peak surge hydrodynamics from `/forecast` and `/dashboard` with downstream links to `/digital-twin` and `/autonomous-grid`.
+- **`AlertsTopBar.tsx`**: Mission command header with NDMA Incident Commander #4812 cryptographic auth verification badge, storm selector indicator (`Cyclone MOCHA BOB-02`), state filter dropdown (Odisha, West Bengal, Andhra Pradesh, Tamil Nadu, Gujarat), live warning status beacon, and real-time summary telemetry (catastrophic district count, immediate evacuation priority tally, total population at risk, active shelters, EOC Hotline 1078).
+- **`ImdWarningBanner.tsx`**: Top horizon banner strictly following the official Ministry of Earth Sciences / IMD 4-Stage Warning Protocol (Stage 1 Watch `-72h` in `#FFD600`, Stage 2 Alert `-48h` in `#FF9100`, Stage 3 Warning `-24h` in `#D50000` with animated pulsing ring, Stage 4 Outlook in `#AA00FF`). Features an animated tactical radar sweep, real-time 3-hour bulletin update countdown clock, last issued timestamp, landfall expectations (`Tomorrow 18:30 IST • Puri Coast`), peak storm surge (`+3.4m AAT`), and interactive stage tabs for operational filtering.
+- **`CoastalInundationMap.tsx`**: High-performance 2D GIS Bay of Bengal geospatial simulator with shoreline bathymetry, dynamic saline surge wash plumes, eye-wall vector trajectories, and 4-tier surge contour check toggles (`0.5m` Light Cyan wash, `1.5m` Amber roadway flooding, `3.0m` Red structural flooding, `5.0m` Magenta extreme intrusion). Includes overlay filters for Critical Hospitals & Clinics (flood risk & diesel generator health), Multipurpose Cyclone Shelters (occupancy capacity & elevated all-weather ramps), 33kV/11kV Power Substations (voltage tier & precautionary shutdown status), and National/State Highways (NH-316, SH-12, NH-16 dry evacuation corridors vs. flooded routes). Integrates interactive SVG node pins, tactical HUD popovers, compass rose, and Fullscreen API expansion.
+- **`DistrictVulnerabilityMatrix.tsx`**: Searchable, sortable, high-density coastal matrix tracking districts across Odisha, West Bengal, Andhra Pradesh, Tamil Nadu, and Gujarat. Features instant search input with electric cyan focus ring, column sorting (Severity, Peak Wind Gusts, 24h Rainfall, Surge Height, Evacuation Priority), dynamic progress bars for wind velocity, and per-row `Evacuate District` action buttons pre-filling legal evacuation orders.
+- **`MultiLingualBulletinGenerator.tsx`**: Real-time AI meteorological studio generating standardized multi-lingual bulletins in 7 languages (English, Hindi, Bengali, Odia, Tamil, Telugu, Gujarati) with instant language selector pills, structured damage assessments (thatched houses, HT lines, standing crops, coastal roads), civil & maritime advisories (fishermen ban, Great Danger Signal 10 port signals, evacuation mandates), copy-to-clipboard toast feedback, printable dispatch trigger, and mock PDF download (`IMD_Bulletin_04.pdf`).
+- **`CapBroadcastSimulator.tsx`**: Role-guarded emergency dispatcher for authenticated disaster officials. Features exact citizen mobile cell broadcast previews with EAS headers, a formatted ITU-T X.1303 CAP-XML payload previewer with syntax formatting and copy button, a Web Audio API synthetic 853/960 Hz emergency siren warble simulator, and a flashing red `Send Cell Broadcast` trigger opening the two-factor authentication security gate.
+- **`EvacuationOrderModal.tsx`**: Pre-filled statutory evacuation order dialog under the Disaster Management Act. Outlines 3 evacuation zones (Zone A 0-2km Immediate, Zone B 2-5km High, Zone C 5-10km Buffer), emergency transport convoy bus counts (480 buses), NDRF/ODRAF battalion deployments, Section 144 curfew enforcement toggles, designated assembly terminals, and cryptographic signatory verification.
+- **`Broadcast2FaModal.tsx`**: Dual-confirmation security gate to prevent false emergency alarms. Provides geo-fenced cell tower cluster selection across R_max danger zones (Puri, Paradip, Kendrapara, Digha), estimated civilian reach (~1.48M handsets), 6-digit incident commander TOTP token input with quick auto-fill test shortcut, and simulated telecom gateway transmission.
+- **`BulletinPdfModal.tsx`**: High-fidelity Government of India / IMD Ministry of Earth Sciences letterhead preview document with official emblem, reference dispatch number, timestamps, and direct PDF download trigger.
+- **`AlertsFooterActions.tsx`**: Downstream pipeline action strip providing one-click handoffs to Page 9 (`Launch Digital Twin` → `/digital-twin?storm=mocha`) and Page 11 (`Deploy Drone Grid` → `/autonomous-grid?status=evac`), alongside national emergency hotlines (1078, 1070, 112).
+- **`alertsData.ts` & `types.ts`**: Comprehensive domain dataset containing full IMD alert stage configs, 13 coastal district vulnerability records across 5 states, 18 geospatial infrastructure nodes, complete meteorological translations in 7 Indian regional languages, OASIS CAP v1.2 XML schemas, and default evacuation order templates.
 
 ---
 
@@ -448,14 +479,28 @@ d:/SIH 2026/
 │   │   │   └── register/page.tsx               # Agency verification request form
 │   │   ├── (main)/                             # Operational Command route group
 │   │   │   ├── layout.tsx                      # Topbar + AppSidebar persistent layout
+│   │   │   ├── alerts/page.tsx                 # Disaster Early Warning & Coastal Alert Hub (NEW)
 │   │   │   ├── dashboard/page.tsx              # Geospatial Command Center page
-│   │   │   ├── forecast/page.tsx               # Trajectory & Intensity Prediction Center (NEW)
+│   │   │   ├── forecast/page.tsx               # Trajectory & Intensity Prediction Center
 │   │   │   └── satellite-analyzer/page.tsx     # Multi-Spectral AI Pattern Studio page
 │   │   ├── favicon.ico
 │   │   ├── globals.css                         # Tailwind v4 theme, animations & utility classes
 │   │   ├── layout.tsx                          # Root layout with 15 fonts & Scanner background
 │   │   └── page.tsx                            # Primary public Landing Page
 │   ├── components/
+│   │   ├── alerts/                             # Disaster Early Warning Hub (Page 6)
+│   │   │   ├── AlertsFooterActions.tsx         # Downstream CTAs to Page 9 & 11 + EOC Hotlines
+│   │   │   ├── AlertsTopBar.tsx                # EOC Command Header with Officer #4812 auth badge
+│   │   │   ├── alertsData.ts                   # Multi-state district dataset, 7 languages, CAP-XML
+│   │   │   ├── Broadcast2FaModal.tsx           # Two-factor authentication gate for cell broadcast
+│   │   │   ├── BulletinPdfModal.tsx            # Official IMD/NDMA letterhead printable preview
+│   │   │   ├── CapBroadcastSimulator.tsx       # ITU-T X.1303 CAP-XML & citizen mobile cell preview
+│   │   │   ├── CoastalInundationMap.tsx        # 2D GIS Bay of Bengal canvas & infrastructure HUD
+│   │   │   ├── DistrictVulnerabilityMatrix.tsx # Searchable/sortable table with immediate evac scores
+│   │   │   ├── EvacuationOrderModal.tsx        # Legal evacuation order pre-fill & bus convoy fleet
+│   │   │   ├── ImdWarningBanner.tsx            # Official IMD 4-stage alert banner & countdown clock
+│   │   │   ├── MultiLingualBulletinGenerator.tsx # Instant bulletins in 7 languages (EN/HI/BN/OR/TA/TE/GU)
+│   │   │   └── types.ts                        # Domain TypeScript contracts for alert operations
 │   │   ├── analyzer/
 │   │   │   ├── DvorakTelemetryCard.tsx         # Dvorak pattern HUD with ShinyBadge, softmax & moving gradient
 │   │   │   ├── GradCamStudio.tsx               # Explainable AI Grad-CAM studio with colormaps & Noise overlay
@@ -472,6 +517,17 @@ d:/SIH 2026/
 │   │   │   ├── RealTimeParameters.tsx          # 6-card meteorological matrix with cyan text shadows
 │   │   │   ├── SatelliteMapView.tsx            # Geospatial satellite preview card
 │   │   │   └── TrendCharts.tsx                 # Temporal projection area chart container
+│   │   ├── forecast/                           # Trajectory & Intensity Prediction (Page 5)
+│   │   │   ├── ForecastGisCanvas.tsx           # MapLibre GL geospatial trajectory canvas
+│   │   │   ├── ForecastTopBar.tsx              # Command bar with horizon tabs & prediction modes
+│   │   │   ├── forecastData.ts                 # Cyclone Mocha/Biparjoy scenarios & synthesis
+│   │   │   ├── IntensityStudio.tsx             # Dual-axis Recharts ComposedChart & RI gauge
+│   │   │   ├── LandfallCountdownBanner.tsx     # Urgent countdown banner & diagnostic details link
+│   │   │   ├── LandfallDetailsModal.tsx        # Coastal landfall diagnostic modal overlay
+│   │   │   ├── NwpComparisonMatrix.tsx         # AI vs ECMWF/IMD-GFS/NCMRWF accuracy matrix
+│   │   │   ├── PipelineHandoffExport.tsx       # Inter-page CTAs + GeoJSON/Shapefile/CSV exporters
+│   │   │   ├── RiAttributionModal.tsx          # Rapid Intensification SHAP explainability modal
+│   │   │   └── types.ts                        # Domain types for trajectory forecasting
 │   │   ├── landing/
 │   │   │   ├── CurvedWaveSeparator.tsx         # Quadratic bezier wave divider
 │   │   │   ├── FeatureGrid.tsx                 # 5 Core scientific capability cards (TiltedCard)
@@ -863,6 +919,85 @@ Split into two sections:
 - **4 Atmospheric Driver Cards**: Sea Surface Temperature (SST vs. $28.5^\circ\text{C}$ threshold), Vertical Wind Shear (favorable/unfavorable coloring), Ocean Heat Content (OHC in $\text{kJ/cm}^2$), and Upper-Level Divergence level.
 - **SHAP Importance Bar Chart**: Horizontally oriented feature importance bars ranked by contribution, color-coded by positive (intensification) or negative (inhibiting) impact.
 
+### 6.9 Disaster Alert Hub Components (`src/components/alerts/`)
+
+All 12 files in this module were created in Phase 14. Collectively they implement CYTORN Page 6 — the **Disaster Early Warning & Coastal Alert Hub (`/alerts`)** — converting raw meteorological trajectories and surge predictions from Page 5 (`/forecast`) and Page 3 (`/dashboard`) into actionable life-safety warnings, district vulnerability tables, multi-lingual public bulletins, and Common Alerting Protocol (CAP) emergency broadcasts.
+
+#### 1. `types.ts` — Domain TypeScript Contracts
+- **`AlertStageNumber`**: Union type for the 4 IMD alert stages (`1` | `2` | `3` | `4`).
+- **`AlertStageConfig`**: Complete stage parameters including timing windows, colors (`colorHex`, `borderHex`, `bgHex`), pulse animations, and operational mandates.
+- **`DistrictVulnerability`**: Coastal exposure models featuring severity classifications (`catastrophic` $\ge 180\text{ km/h}$, `severe`, `moderate`), peak gusts, 24h precipitation, storm surge height, evacuation priority scores (`IMMEDIATE`, `HIGH`, `STANDBY`, `MONITOR`), population at risk, and shelter bed capacities.
+- **`InfrastructureNode`**: Critical facility models across 4 categories: `hospital`, `shelter`, `substation`, `highway` with flood depths, emergency generator readiness, all-weather ramp availability, electrical voltage tiers, and evacuation arterial statuses.
+- **`MultiLingualBulletin`**: Standardized multi-lingual dispatch structures including storm coordinates, central pressures, landfall windows, sectoral damage expectations, and maritime advisories.
+- **`CapXmlPayload`**: ITU-T X.1303 / OASIS CAP v1.2 compliant data model for national telecom cell broadcast dispatch.
+- **`EvacuationOrderData`**: Formal administrative parameters for statutory evacuation decrees under the Disaster Management Act.
+
+#### 2. `alertsData.ts` — Multi-State Coastal Dataset & 7-Language Bulletins
+- **IMD Alert Configurations**: Standard operational thresholds for Stage 1 Watch (`#FFD600`), Stage 2 Alert (`#FF9100`), Stage 3 Warning (`#D50000`), and Stage 4 Outlook (`#AA00FF`).
+- **13 Target Coastal Districts**: Exhaustive dataset covering Odisha (*Puri, Jagatsinghpur, Kendrapara, Bhadrak, Balasore, Ganjam*), West Bengal (*South 24 Parganas, Purba Medinipur, North 24 Parganas*), Andhra Pradesh (*Srikakulam, Visakhapatnam*), Tamil Nadu (*Nagapattinam*), and Gujarat (*Kachchh*).
+- **18 Critical Infrastructure Assets**: Normalized geospatial coordinates for hospitals (e.g. Puri District Hospital, Paradip Marine Hospital), multipurpose cyclone shelters, 33kV/11kV substations, and highways (NH-316, SH-12, NH-16).
+- **Multi-Lingual Meteorological Bulletins**: Full translations across 7 languages: **English**, **Hindi (हिंदी)**, **Odia (ଓଡ଼ିଆ)**, **Bengali (বাংলা)**, **Tamil (தமிழ்)**, **Telugu (తెలుగు)**, and **Gujarati (ગુજરાતી)**.
+- **ITU-T X.1303 XML Template & Evacuation Defaults**: Pre-configured alert payloads for Cyclone MOCHA and standardized emergency order templates.
+
+#### 3. `AlertsTopBar.tsx` — Incident Command Header
+- **Incident Commander Verification Badge**: Cryptographically verified identity (`🛡️ NDMA Officer #4812`).
+- **Active Storm Indicator**: Real-time storm badge displaying `Cyclone MOCHA (BOB-02)` with pulsing signal wave.
+- **State Selection Dropdown**: Dynamically switches jurisdictional views between All States, Odisha, West Bengal, Andhra Pradesh, Tamil Nadu, and Gujarat.
+- **EOC Quick Telemetry Strip**: Displays live catastrophic district counts, immediate evacuation mandates, total civilian population at coastal risk, and active multipurpose cyclone shelter tallies.
+- **Direct EOC Hotline Dialer**: Quick link to National Disaster Helpline `1078`.
+
+#### 4. `ImdWarningBanner.tsx` — Official 4-Stage Warning Banner (Section A)
+- **4 Interactive Stage Tabs**: Interactive pills allowing operational commanders to switch and review Stage 1 (-72h), Stage 2 (-48h), Stage 3 (-24h Active Warning), and Stage 4 (Post-Landfall Outlook).
+- **Blinking Active Beacon**: Stage 3 hazard red pulsing icon ring with animated border flash.
+- **Real-Time 3-Hour Countdown Clock**: Live descending timer tracking the countdown to the next mandated IMD advisory bulletin.
+- **Operational Metrics**: Real-time readouts for last issued bulletin timestamp, expected landfall window, and peak astronomical surge height (`+3.4m AAT`).
+
+#### 5. `CoastalInundationMap.tsx` — 2D Geospatial Inundation Canvas (Section C)
+- **Bay of Bengal Geospatial Canvas**: High-definition SVG visualization of the East Coast of India, bathymetric shelf contours, and dynamic saltwater wash over coastal districts.
+- **Surge Elevation Contours**: 4 toggled elevation reach layers — `0.5m` Light Cyan (beachfront wash), `1.5m` Amber (roadway flooding), `3.0m` Red (structural flooding), `5.0m` Magenta (catastrophic saltwater reach).
+- **Infrastructure Overlays**: 4 interactive filter toggles isolating Hospitals, Shelters, Power Substations, and Highways.
+- **Tactical Popover HUD**: Clicking or hovering any facility reveals flood inundation depth, generator operational status, bed occupancy, ramp access, voltage tier, or detour routes.
+- **Fullscreen API Mode**: Expands the canvas to edge-to-edge tactical display.
+
+#### 6. `DistrictVulnerabilityMatrix.tsx` — District Impact Matrix (Section B)
+- **High-Density Data Table**: Sortable by District Name, Severity, Peak Wind Gusts, 24h Cumulative Rainfall, Storm Surge, and Evacuation Priority.
+- **Search District Filter**: Instant search box with electric cyan focus ring (`#00F2FE`) filtering across districts, states, and hazard zones.
+- **Severity Badges**: Red for Catastrophic ($\ge 180\text{ km/h}$), Orange for Severe ($120-179\text{ km/h}$), Yellow for Moderate ($60-119\text{ km/h}$).
+- **Evacuation Priority Scores**: Real-time calculation: `🔴 IMMEDIATE` (0-5 km shoreline zone), `🟠 HIGH` (5-10 km zone), `🟡 STANDBY` (inland buffer).
+- **Interactive Row Selection**: Isolates district boundary and facility pins on the 2D Inundation Map.
+- **`Evacuate District` Action Button**: Directly triggers the pre-filled legal evacuation order modal.
+
+#### 7. `MultiLingualBulletinGenerator.tsx` — Multi-Lingual Bulletin Studio (Section D)
+- **One-Click Translation Pills**: Instant switching across English, Hindi, Odia, Bengali, Tamil, Telugu, and Gujarati.
+- **Structured Dispatch Elements**: Displays warning stage, storm center coordinates, central pressure, expected landfall sector, sector-specific damage (kutcha houses, power lines, standing crops, arterial roads), and maritime advisories.
+- **Export & Dispatch CTAs**: Copy dispatch text with clipboard feedback, trigger system print dialog (`Print Dispatch`), and download formatted official PDF bulletins (`IMD_Bulletin_04.pdf`).
+
+#### 8. `CapBroadcastSimulator.tsx` — CAP Emergency Broadcast Dispatcher (Section E)
+- **Dual Display Tabs**: Switches between the citizen mobile phone preview and the formatted ITU-T X.1303 CAP-XML payload.
+- **Mobile Phone Cell Broadcast Mockup**: Real-time preview of how the high-urgency message renders on citizen mobile devices with carrier headers and audible warning labels.
+- **Synthetic EAS Siren Chime**: Integrates Web Audio API sawtooth oscillator generating the official 853 Hz and 960 Hz emergency alert tone.
+- **Flashing Red 2FA Dispatch Button**: Opens the two-factor authentication modal to prevent accidental false alarms.
+
+#### 9. `EvacuationOrderModal.tsx` — Statutory Evacuation Order Modal
+- **Legal Order Pre-Fill**: Dynamically populates district name, risk metrics, and order reference numbers.
+- **3-Zone Evacuation Protocol**: Zone A (0-2 km), Zone B (2-5 km), and Zone C (5-10 km) target civilian population counts.
+- **Convoy Resource Allocation**: Allocates NDRF battalions, ODRAF units, evacuation bus fleets (480 buses), and mobile medical triage beds.
+- **Section 144 Curfew Toggle**: Enables legal civilian movement restrictions along coastal corridors.
+- **Officer PKI Signing**: Authenticated dispatch trigger with loading state and confirmation receipt.
+
+#### 10. `Broadcast2FaModal.tsx` — Cell Broadcast 2FA Gate
+- **Geo-Fenced Cell Tower Cluster Selection**: Toggles cell broadcast towers across Puri, Paradip, Kendrapara, and Digha sectors (~1.48 million mobile handsets).
+- **6-Digit TOTP Token Input**: Interactive 6-box input with automated next-focus and quick "Auto-fill Token (729401)" test shortcut.
+- **Simulated Telecom Dispatch**: Animated progress states simulating broadcast packet propagation across national telecom providers (BSNL, Airtel, Jio).
+
+#### 11. `BulletinPdfModal.tsx` — Official Government Letterhead Preview
+- **Official IMD / MoES Document View**: Formatted government dispatch sheet complete with administrative header, reference dispatch IDs, damage breakdown, and signature block.
+- **Direct PDF Generation**: Client-side Blob download trigger generating `IMD_Official_Bulletin_04.pdf`.
+
+#### 12. `AlertsFooterActions.tsx` — Downstream Pipeline Handoff Strip
+- **Inter-Page Decision Handoffs**: Deep Blue button routing to Page 9 (`Launch Digital Twin` → `/digital-twin?storm=mocha`) and Dark Slate button routing to Page 11 (`Deploy Drone Grid` → `/autonomous-grid?status=evac`).
+- **Emergency Service Hotlines**: Integrated links for NDMA (1078), State EOC (1070), and Central Emergency (112).
+
 ---
 
 ## 7. Routing Architecture & Page Walkthroughs
@@ -879,8 +1014,9 @@ src/app/
 │   └── register/page.tsx         # Route: /register (Agency Access Verification)
 └── (main)/                       # Group: Authenticated Command Center
     ├── layout.tsx                # Topbar + AppSidebar persistent workspace
+    ├── alerts/page.tsx           # Route: /alerts (Disaster Early Warning & Coastal Alert Hub) [NEW]
     ├── dashboard/page.tsx        # Route: /dashboard (Live Geospatial Command Dashboard)
-    ├── forecast/page.tsx         # Route: /forecast (Trajectory & Intensity Prediction Center) [NEW]
+    ├── forecast/page.tsx         # Route: /forecast (Trajectory & Intensity Prediction Center)
     └── satellite-analyzer/page.tsx # Route: /satellite-analyzer (Multi-Spectral Pattern Studio)
 ```
 
@@ -920,7 +1056,17 @@ The newly built Page 5 is the operational PINN forecast command hub.
 - `PipelineHandoffExport` at the bottom provides 3 inter-page CTAs and 3 format-specific GIS exporters.
 - `LandfallDetailsModal` and `RiAttributionModal` are rendered as fixed-position overlays triggered from within their respective components.
 
-### 7.5 Authentication & Role Verification (`/login`, `/register`)
+### 7.5 Disaster Early Warning & Coastal Alert Hub (`/alerts`)
+Page 6 functions as the multi-agency emergency operations command center for NDMA, SDMA, and district leadership:
+- Ingests upstream storm trajectory, landfall coordinates, and storm surge telemetry from `/forecast` and `/dashboard` via query parameters (`?storm=`, `?district=`, `?stage=`, `?state=`).
+- `AlertsTopBar` renders the Incident Commander auth verification badge (Officer #4812), storm indicator, state selector, and key aggregate impact tallies.
+- `ImdWarningBanner` forms the top horizon with the 4 IMD cyclone alert stages (Watch, Alert, Warning, Outlook), real-time countdown to next mandated bulletin, and operational metrics.
+- High-density 2-column grid renders `CoastalInundationMap` (interactive 2D Bay of Bengal coastline with 0.5m-5m surge contours and infrastructure overlays) alongside `DistrictVulnerabilityMatrix` (searchable/sortable table with immediate evacuation scores).
+- Lower grid sections render `MultiLingualBulletinGenerator` (instant AI bulletins in 7 languages with printable dispatch and mock PDF download) alongside `CapBroadcastSimulator` (ITU-T X.1303 CAP-XML inspector, citizen mobile phone cell broadcast mockup, synthetic siren chime, and 2FA confirmation gate).
+- `AlertsFooterActions` bridges the emergency decisions downstream to Page 9 (`/digital-twin`) and Page 11 (`/autonomous-grid`).
+- Fixed overlay modals handle pre-filled legal evacuation decrees (`EvacuationOrderModal`), two-factor authentication cell broadcast verification (`Broadcast2FaModal`), and official government letterhead bulletin export (`BulletinPdfModal`).
+
+### 7.6 Authentication & Role Verification (`/login`, `/register`)
 - Role selector tabs allowing instant switching between **Scientist**, **NDMA/SDMA**, and **Public**.
 - Agency ID and 256-bit encrypted credential fields with password reveal toggles.
 - Registration page for institutional onboarding of meteorological officers.
@@ -1114,11 +1260,12 @@ Tactile sensor radiometric calibration sliders leverage spring dynamics to preve
 - **DashboardPill Label Update (`DashboardPill.tsx`):** Shortened `targetLabel` from `"Landing Page"` to `"Landing"` for a compact navbar footprint.
 - **NwpComparisonMatrix Badge Fix:** Added `whitespace-nowrap`, `inline-flex`, and `min-w-[560px]` to prevent `38 km` badge from wrapping across two lines in narrow panels.
 - **Export Button Label Generalization (`PipelineHandoffExport.tsx`):** Replaced verbose format labels with clean generic action labels: `Export GeoJSON`, `Export Shapefile`, `Export CSV`.
+- **Complete Disaster Early Warning & Coastal Alert Hub — `/alerts` (Page 6):** 12-file component architecture establishing the official Emergency Operations Center (EOC) for NDMA, SDMA, and district leadership. Includes the IMD 4-Stage Warning Banner (`ImdWarningBanner.tsx`) with 3h countdown clock and telemetry gauges; 2D Coastal Inundation Map (`CoastalInundationMap.tsx`) with 0.5m-5m surge contours, infrastructure overlays (hospitals, shelters, substations, highways), and Fullscreen API; District Impact & Vulnerability Matrix (`DistrictVulnerabilityMatrix.tsx`) with immediate evacuation priority scores and sorting; Multi-Lingual Bulletin Generator (`MultiLingualBulletinGenerator.tsx`) translating standardized IMD dispatches into 7 languages (EN, HI, BN, OR, TA, TE, GU) with PDF export; Common Alerting Protocol simulator (`CapBroadcastSimulator.tsx`) with ITU-T X.1303 CAP-XML preview, citizen mobile cell broadcast mockup, and Web Audio API 853/960 Hz emergency siren warble; legal Evacuation Order Modal (`EvacuationOrderModal.tsx`) with 3-zone distributions and convoy fleet logistics; role-guarded 2FA confirmation gate modal (`Broadcast2FaModal.tsx`) with cell tower selection across ~1.48M handsets; official government letterhead preview modal (`BulletinPdfModal.tsx`); downstream action strip (`AlertsFooterActions.tsx`) linking to Page 9 and Page 11; and multi-state domain dataset (`alertsData.ts`, `types.ts`).
 
 ### 🚀 Upcoming Milestones (Future Scope):
 1. **Live FastMapLibre GL Integration:** Connect MapLibre GL instance to live WMS/WMTS raster tile servers (MOSDAC INSAT-3DR TIR-1 layers).
 2. **FastAPI Backend Webhook Synchronization:** Connect `src/lib/api.ts` to live Python model inference pipelines (ConvNeXt-ViT, YOLOv8-Eye, and PINNs Navier-Stokes solver).
-3. **Common Alerting Protocol (CAP) XML Engine:** Enable automated generation and direct push of CAP v1.2 XML alerts to district administrative portals.
+3. **Autonomous Grid & Drone Mesh (Page 11):** Connect live evacuation order manifests to autonomous drone dispatch routing and relief convoy mesh.
 4. **Offline Mobile PWA Mode:** Implement Service Workers for offline coastal early warning bulletins during severe power and network grid disruptions.
 
 ---
