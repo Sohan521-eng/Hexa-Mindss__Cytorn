@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { 
-  Waves, 
   Hospital, 
   ShieldCheck, 
   Zap, 
@@ -10,16 +9,15 @@ import {
   Maximize2, 
   Minimize2, 
   Info, 
-  Eye, 
-  EyeOff, 
   Layers, 
-  Compass, 
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Building2,
-  Navigation
+  ChevronRight,
+  Eye,
+  EyeOff,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw
 } from "lucide-react";
+import Noise from "@/components/ui/Noise";
 import { 
   InfrastructureNode, 
   InfrastructureType, 
@@ -27,6 +25,7 @@ import {
   DistrictVulnerability 
 } from "./types";
 import { CRITICAL_INFRASTRUCTURE_NODES } from "./alertsData";
+import { useGsapPill, PillButton } from "@/components/forecast/ForecastTopBar";
 
 interface CoastalInundationMapProps {
   selectedDistrict: DistrictVulnerability | null;
@@ -40,7 +39,173 @@ export function CoastalInundationMap({
   onOpenEvacModal,
 }: CoastalInundationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const mapViewportRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
+
+  // Map Zoom & Pan State (Atomic unified state for mouse scroll wheel & drag)
+  const [viewState, setViewState] = useState({
+    zoom: 1,
+    panX: 0,
+    panY: 0,
+  });
+  const viewStateRef = useRef(viewState);
+  viewStateRef.current = viewState;
+  const { zoom, panX, panY } = viewState;
+
+  const [isDragging, setIsDragging] = useState(false);
+  const hasMovedRef = useRef(false);
+  const dragStartRef = useRef({
+    clientX: 0,
+    clientY: 0,
+    panX: 0,
+    panY: 0,
+  });
+
+  const symbologyPill = useGsapPill(isLegendOpen);
+  const fullscreenPill = useGsapPill(isFullscreen);
+
+  // Atomic focal point zoom function
+  const zoomAtPoint = useCallback((zoomDelta: number, clientX?: number, clientY?: number) => {
+    const current = viewStateRef.current;
+    // zoomDelta > 0 means zoom in, < 0 means zoom out
+    const factor = zoomDelta > 0 ? 1.18 : 0.85;
+    const nextZoom = Math.min(Math.max(current.zoom * factor, 0.75), 6.0);
+    if (Math.abs(nextZoom - current.zoom) < 0.001) return;
+
+    const viewport = mapViewportRef.current;
+    if (!viewport || clientX === undefined || clientY === undefined) {
+      setViewState((prev) => ({
+        ...prev,
+        zoom: nextZoom,
+      }));
+      return;
+    }
+
+    const rect = viewport.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    // Viewport center on screen
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    // Mouse pixel offset from center
+    const mousePixelOffsetX = clientX - centerX;
+    const mousePixelOffsetY = clientY - centerY;
+
+    // SVG canvas scale factor (preserveAspectRatio="xMidYMid slice" on 1000x650)
+    const svgScale = Math.max(rect.width / 1000, rect.height / 650);
+    const mouseSvgOffsetX = mousePixelOffsetX / svgScale;
+    const mouseSvgOffsetY = mousePixelOffsetY / svgScale;
+
+    // Scale ratio k = nextZoom / current.zoom
+    const k = nextZoom / current.zoom;
+
+    // Focal point preservation formula: ensures the exact point under the mouse cursor remains stationary
+    const nextPanX = current.panX - (k - 1) * (mouseSvgOffsetX - current.panX);
+    const nextPanY = current.panY - (k - 1) * (mouseSvgOffsetY - current.panY);
+
+    const maxPanX = 1800 * nextZoom;
+    const maxPanY = 1200 * nextZoom;
+
+    setViewState({
+      zoom: nextZoom,
+      panX: Math.min(Math.max(nextPanX, -maxPanX), maxPanX),
+      panY: Math.min(Math.max(nextPanY, -maxPanY), maxPanY),
+    });
+  }, []);
+
+  // Non-passive wheel event listener to zoom in and out with mouse scroll
+  useEffect(() => {
+    const viewport = mapViewportRef.current;
+    if (!viewport) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Prevent browser page from scrolling while zooming map
+      e.preventDefault();
+      (e as any).__handledByMap = true;
+
+      // Allow natural scrolling inside the legend card if hovered
+      const target = e.target as HTMLElement | null;
+      if (target?.closest(".symbology-legend-card")) return;
+
+      const zoomDelta = e.deltaY < 0 ? 1 : -1;
+      zoomAtPoint(zoomDelta, e.clientX, e.clientY);
+    };
+
+    viewport.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      viewport.removeEventListener("wheel", handleWheel);
+    };
+  }, [zoomAtPoint]);
+
+  // Global mouseup listener to release dragging if cursor leaves viewport
+  useEffect(() => {
+    if (!isDragging) return;
+    const onWindowMouseUp = () => setIsDragging(false);
+    window.addEventListener("mouseup", onWindowMouseUp);
+    return () => window.removeEventListener("mouseup", onWindowMouseUp);
+  }, [isDragging]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("button, a, .symbology-legend-card")) return;
+
+    hasMovedRef.current = false;
+    dragStartRef.current = {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      panX: viewStateRef.current.panX,
+      panY: viewStateRef.current.panY,
+    };
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const viewport = mapViewportRef.current;
+    if (!viewport) return;
+    const rect = viewport.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const dxPixels = e.clientX - dragStartRef.current.clientX;
+    const dyPixels = e.clientY - dragStartRef.current.clientY;
+
+    if (Math.hypot(dxPixels, dyPixels) > 4) {
+      hasMovedRef.current = true;
+    }
+
+    const svgScale = Math.max(rect.width / 1000, rect.height / 650);
+    const dxSvg = dxPixels / svgScale;
+    const dySvg = dyPixels / svgScale;
+
+    const currentZoom = viewStateRef.current.zoom;
+    const maxPanX = 1800 * currentZoom;
+    const maxPanY = 1200 * currentZoom;
+
+    setViewState((prev) => ({
+      ...prev,
+      panX: Math.min(Math.max(dragStartRef.current.panX + dxSvg, -maxPanX), maxPanX),
+      panY: Math.min(Math.max(dragStartRef.current.panY + dySvg, -maxPanY), maxPanY),
+    }));
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleResetZoom = () => {
+    setViewState({ zoom: 1, panX: 0, panY: 0 });
+  };
+
+  const handleZoomIn = () => {
+    zoomAtPoint(1);
+  };
+
+  const handleZoomOut = () => {
+    zoomAtPoint(-1);
+  };
 
   // Contour toggles (0.5m, 1.5m, 3.0m, 5.0m)
   const [visibleContours, setVisibleContours] = useState<Record<SurgeContourLevel, boolean>>({
@@ -81,7 +246,6 @@ export function CoastalInundationMap({
     setVisibleLayers((prev) => ({ ...prev, [type]: !prev[type] }));
   };
 
-  // Filter nodes based on visible layers
   const displayedNodes = CRITICAL_INFRASTRUCTURE_NODES.filter(
     (node) => visibleLayers[node.type]
   );
@@ -90,167 +254,246 @@ export function CoastalInundationMap({
     <div 
       ref={containerRef}
       id="coastal-inundation-canvas"
-      className={`relative flex flex-col rounded-xl border border-[rgba(0,242,254,0.2)] bg-[#0A1220] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden transition-all duration-300 ${
-        isFullscreen ? "p-6 fixed inset-0 z-50 rounded-none bg-[#050B14]" : "h-full min-h-[460px] lg:min-h-[500px]"
+      className={`relative flex flex-col rounded-xl backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.7)] overflow-hidden transition-all duration-300 ${
+        isFullscreen ? "fixed inset-0 z-50 rounded-none bg-[#050B14] p-0" : "h-full min-h-[500px] lg:min-h-[560px]"
       }`}
+      style={{
+        background: "#0F1B2F",
+        border: "1.5px solid rgba(0, 242, 254, 0.55)",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,242,254,0.12), 0 0 18px rgba(0,242,254,0.15)",
+      }}
     >
-      {/* Top Header & Layer Toggles Bar */}
-      <div className="p-3 sm:p-4 bg-[#0F1B2F]/90 border-b border-[rgba(0,242,254,0.15)] flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#0E3D59] border border-[#00F2FE]/40 flex items-center justify-center">
-            <Waves className="w-4 h-4 text-[#00F2FE]" />
-          </div>
+      {/* Noise Film Grain Texture — matches other pages */}
+      <Noise patternSize={250} patternScaleX={1.2} patternScaleY={1.2} patternRefreshInterval={2} patternAlpha={12} />
+
+      {/* ─── Top Header & Controls Portion (with Dedicated Noise Background) ─── */}
+      <div className="relative overflow-hidden bg-[#0A1220]/95 border-b border-[rgba(0,242,254,0.18)] shrink-0">
+        {/* Dedicated React Bits Noise Grain Texture */}
+        <Noise 
+          patternSize={250} 
+          patternScaleX={1.2} 
+          patternScaleY={1.2} 
+          patternRefreshInterval={2} 
+          patternAlpha={16} 
+        />
+
+        {/* Top Header & Layer Toggles Bar */}
+        <div className="relative z-10 p-3 sm:p-4 border-b border-[rgba(0,242,254,0.12)] flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm sm:text-base font-bold text-white font-orbitron tracking-wide flex items-center gap-2">
-              <span>Coastal Inundation & Infrastructure Map</span>
-              <span className="text-[10px] font-mono text-[#00F2FE] bg-[#00F2FE]/10 px-1.5 py-0.5 rounded border border-[#00F2FE]/30 font-semibold">
-                2D GIS SIMULATOR
+            <h3 className="text-base sm:text-lg font-extrabold tracking-wide flex items-center gap-2">
+              <span className="heading-gradient-shadow-wrapper">
+                <span className="heading-moving-gradient font-black font-rajdhani uppercase tracking-wider">
+                  Coastal Flooding & Storm Surge Map
+                </span>
               </span>
             </h3>
-            <p className="text-[11px] text-slate-400 font-mono">
-              Bay of Bengal Surge Extent • Shoreline Inundation & Critical Facility Risk
+            <p className="text-xs text-[#00F2FE] font-medium font-sans [text-shadow:0_2px_4px_rgba(0,0,0,0.95)]">
+              Predicted flood water levels and essential emergency services at risk
             </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Legend Toggle Button (Matching StateSelectorPill without click glow) */}
+            <PillButton
+              btnRef={symbologyPill.btnRef}
+              circleRef={symbologyPill.circleRef}
+              handleEnter={symbologyPill.handleEnter}
+              handleLeave={symbologyPill.handleLeave}
+              open={false}
+              onClick={() => setIsLegendOpen(!isLegendOpen)}
+              icon={<Info style={{ width: 14, height: 14 }} className="text-[#00F2FE]" />}
+              label="SYMBOLOGY"
+              style={{
+                height: "38px",
+                borderRadius: "0.75rem",
+                border: "1.5px solid rgba(0,242,254,0.65)",
+                background: "rgba(0,242,254,0.08)",
+                boxShadow: "0 4px 16px -2px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.2)",
+                padding: "0 14px",
+                fontSize: "12px",
+                outline: "none",
+              }}
+            />
+
+            {/* Fullscreen Button (Matching StateSelectorPill without click glow) */}
+            <PillButton
+              btnRef={fullscreenPill.btnRef}
+              circleRef={fullscreenPill.circleRef}
+              handleEnter={fullscreenPill.handleEnter}
+              handleLeave={fullscreenPill.handleLeave}
+              open={false}
+              onClick={handleToggleFullscreen}
+              icon={isFullscreen ? <Minimize2 style={{ width: 14, height: 14 }} className="text-[#00F2FE]" /> : <Maximize2 style={{ width: 14, height: 14 }} className="text-[#00F2FE]" />}
+              label={isFullscreen ? "EXIT FULLSCREEN" : "FULLSCREEN"}
+              style={{
+                height: "38px",
+                borderRadius: "0.75rem",
+                border: "1.5px solid rgba(0,242,254,0.65)",
+                background: "rgba(0,242,254,0.08)",
+                boxShadow: "0 4px 16px -2px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.2)",
+                padding: "0 14px",
+                fontSize: "12px",
+                outline: "none",
+              }}
+            />
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Fullscreen Button */}
-          <button
-            onClick={handleToggleFullscreen}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#050B14] hover:bg-[#16253D] border border-[#1E3252] hover:border-[#00F2FE]/50 text-slate-300 hover:text-white text-xs font-mono transition-all cursor-pointer"
-            title="Toggle Fullscreen Map Canvas"
-          >
-            {isFullscreen ? (
-              <>
-                <Minimize2 className="w-3.5 h-3.5 text-[#00F2FE]" />
-                <span className="hidden sm:inline">Exit Fullscreen</span>
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-3.5 h-3.5 text-[#00F2FE]" />
-                <span className="hidden sm:inline">Fullscreen</span>
-              </>
-            )}
-          </button>
+        {/* Control Strip: Contours & Critical Infrastructure Filters */}
+        <div className="relative z-10 px-3 py-2 flex flex-wrap items-center justify-between gap-3 text-xs">
+          
+          {/* Surge Height Contours Filter */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#00F2FE] font-bold [text-shadow:0_2px_4px_rgba(0,0,0,0.95)] shrink-0">
+              Surge Contours:
+            </span>
+
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0F1B2F]/90 backdrop-blur-xl border border-[rgba(0,242,254,0.4)] shadow-[0_4px_16px_rgba(0,0,0,0.6),0_0_12px_rgba(0,242,254,0.15)]">
+              {/* 0.5m Wash */}
+              <button
+                type="button"
+                onClick={() => handleToggleContour(0.5)}
+                className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold flex items-center justify-center transition cursor-pointer ${
+                  visibleContours[0.5]
+                    ? "bg-[#00F2FE]/15 border border-[#00F2FE]/70 text-[#00F2FE] shadow-[0_0_8px_rgba(0,242,254,0.15)]"
+                    : "bg-[#050B14]/70 hover:bg-[#00F2FE]/15 border border-[#1E3252] hover:border-[#00F2FE]/60 text-[#8E9EB5] hover:text-[#00F2FE]"
+                }`}
+              >
+                0.5m Wash
+              </button>
+
+              {/* 1.5m Road */}
+              <button
+                type="button"
+                onClick={() => handleToggleContour(1.5)}
+                className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold flex items-center justify-center transition cursor-pointer ${
+                  visibleContours[1.5]
+                    ? "bg-[#FF9100]/15 border border-[#FF9100]/70 text-[#FF9100] shadow-[0_0_8px_rgba(255,145,0,0.15)]"
+                    : "bg-[#050B14]/70 hover:bg-[#FF9100]/15 border border-[#1E3252] hover:border-[#FF9100]/60 text-[#8E9EB5] hover:text-[#FF9100]"
+                }`}
+              >
+                1.5m Road
+              </button>
+
+              {/* 3.0m Threat */}
+              <button
+                type="button"
+                onClick={() => handleToggleContour(3.0)}
+                className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold flex items-center justify-center transition cursor-pointer ${
+                  visibleContours[3.0]
+                    ? "bg-[#D50000]/15 border border-[#D50000]/70 text-[#FF4D4D] shadow-[0_0_8px_rgba(213,0,0,0.15)]"
+                    : "bg-[#050B14]/70 hover:bg-[#D50000]/15 border border-[#1E3252] hover:border-[#D50000]/60 text-[#8E9EB5] hover:text-[#FF4D4D]"
+                }`}
+              >
+                3.0m Threat
+              </button>
+
+              {/* 5.0m Extreme */}
+              <button
+                type="button"
+                onClick={() => handleToggleContour(5.0)}
+                className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold flex items-center justify-center transition cursor-pointer ${
+                  visibleContours[5.0]
+                    ? "bg-[#E040FB]/15 border border-[#E040FB]/70 text-[#E040FB] shadow-[0_0_8px_rgba(224,64,251,0.15)]"
+                    : "bg-[#050B14]/70 hover:bg-[#E040FB]/15 border border-[#1E3252] hover:border-[#E040FB]/60 text-[#8E9EB5] hover:text-[#E040FB]"
+                }`}
+              >
+                5.0m Extreme
+              </button>
+            </div>
+          </div>
+
+          {/* Infrastructure Layer Filter Buttons */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#00F2FE] font-bold [text-shadow:0_2px_4px_rgba(0,0,0,0.95)] shrink-0">
+              Overlays:
+            </span>
+
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0F1B2F]/90 backdrop-blur-xl border border-[rgba(0,242,254,0.4)] shadow-[0_4px_16px_rgba(0,0,0,0.6),0_0_12px_rgba(0,242,254,0.15)]">
+              {/* Hospitals */}
+              <button
+                type="button"
+                onClick={() => handleToggleLayer("hospital")}
+                className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                  visibleLayers.hospital
+                    ? "bg-[#D50000]/15 border border-[#D50000]/70 text-[#FF4D4D] shadow-[0_0_8px_rgba(213,0,0,0.15)]"
+                    : "bg-[#050B14]/70 hover:bg-[#D50000]/15 border border-[#1E3252] hover:border-[#D50000]/60 text-[#8E9EB5] hover:text-[#FF4D4D]"
+                }`}
+              >
+                <Hospital className="w-3.5 h-3.5 shrink-0" />
+                <span>Hospitals</span>
+              </button>
+
+              {/* Shelters */}
+              <button
+                type="button"
+                onClick={() => handleToggleLayer("shelter")}
+                className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                  visibleLayers.shelter
+                    ? "bg-[#00E676]/15 border border-[#00E676]/70 text-[#00E676] shadow-[0_0_8px_rgba(0,230,118,0.15)]"
+                    : "bg-[#050B14]/70 hover:bg-[#00E676]/15 border border-[#1E3252] hover:border-[#00E676]/60 text-[#8E9EB5] hover:text-[#00E676]"
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                <span>Shelters</span>
+              </button>
+
+              {/* Substations */}
+              <button
+                type="button"
+                onClick={() => handleToggleLayer("substation")}
+                className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                  visibleLayers.substation
+                    ? "bg-[#FF9100]/15 border border-[#FF9100]/70 text-[#FF9100] shadow-[0_0_8px_rgba(255,145,0,0.15)]"
+                    : "bg-[#050B14]/70 hover:bg-[#FF9100]/15 border border-[#1E3252] hover:border-[#FF9100]/60 text-[#8E9EB5] hover:text-[#FF9100]"
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5 shrink-0" />
+                <span>Substations</span>
+              </button>
+
+              {/* Corridors */}
+              <button
+                type="button"
+                onClick={() => handleToggleLayer("highway")}
+                className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                  visibleLayers.highway
+                    ? "bg-[#00F2FE]/15 border border-[#00F2FE]/70 text-[#00F2FE] shadow-[0_0_8px_rgba(0,242,254,0.15)]"
+                    : "bg-[#050B14]/70 hover:bg-[#00F2FE]/15 border border-[#1E3252] hover:border-[#00F2FE]/60 text-[#8E9EB5] hover:text-[#00F2FE]"
+                }`}
+              >
+                <Milestone className="w-3.5 h-3.5 shrink-0" />
+                <span>Corridors</span>
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      {/* Control Strip: Contours & Critical Infrastructure Filters */}
-      <div className="px-3 py-2.5 bg-[#08101E]/95 border-b border-[rgba(0,242,254,0.1)] flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
-        
-        {/* Surge Elevation Contour Toggles */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1">
-            <Layers className="w-3 h-3 text-[#00F2FE]" />
-            Surge Contours:
-          </span>
-
-          <label className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#050B14] border border-[#00F2FE]/30 text-[11px] font-mono text-cyan-300 cursor-pointer hover:bg-cyan-950/30">
-            <input
-              type="checkbox"
-              checked={visibleContours[0.5]}
-              onChange={() => handleToggleContour(0.5)}
-              className="accent-[#00F2FE] cursor-pointer w-3 h-3"
-            />
-            <span>0.5m Wash</span>
-          </label>
-
-          <label className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#050B14] border border-amber-500/30 text-[11px] font-mono text-amber-300 cursor-pointer hover:bg-amber-950/30">
-            <input
-              type="checkbox"
-              checked={visibleContours[1.5]}
-              onChange={() => handleToggleContour(1.5)}
-              className="accent-[#FF9100] cursor-pointer w-3 h-3"
-            />
-            <span>1.5m Road</span>
-          </label>
-
-          <label className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#050B14] border border-red-500/30 text-[11px] font-mono text-red-300 cursor-pointer hover:bg-red-950/30">
-            <input
-              type="checkbox"
-              checked={visibleContours[3.0]}
-              onChange={() => handleToggleContour(3.0)}
-              className="accent-[#D50000] cursor-pointer w-3 h-3"
-            />
-            <span>3.0m Struct</span>
-          </label>
-
-          <label className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#050B14] border border-fuchsia-500/30 text-[11px] font-mono text-fuchsia-300 cursor-pointer hover:bg-fuchsia-950/30">
-            <input
-              type="checkbox"
-              checked={visibleContours[5.0]}
-              onChange={() => handleToggleContour(5.0)}
-              className="accent-[#E040FB] cursor-pointer w-3 h-3"
-            />
-            <span>5.0m Extreme</span>
-          </label>
-        </div>
-
-        {/* Infrastructure Layer Filter Buttons */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold mr-1">
-            Overlays:
-          </span>
-
-          <button
-            onClick={() => handleToggleLayer("hospital")}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono font-medium transition-all cursor-pointer border ${
-              visibleLayers.hospital
-                ? "bg-red-950/60 text-red-300 border-red-500/50 shadow-[0_0_8px_rgba(213,0,0,0.3)]"
-                : "bg-[#050B14] text-slate-500 border-slate-800"
-            }`}
-          >
-            <Hospital className="w-3 h-3 text-red-400" />
-            <span>Hospitals</span>
-          </button>
-
-          <button
-            onClick={() => handleToggleLayer("shelter")}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono font-medium transition-all cursor-pointer border ${
-              visibleLayers.shelter
-                ? "bg-emerald-950/60 text-emerald-300 border-emerald-500/50 shadow-[0_0_8px_rgba(0,230,118,0.3)]"
-                : "bg-[#050B14] text-slate-500 border-slate-800"
-            }`}
-          >
-            <ShieldCheck className="w-3 h-3 text-emerald-400" />
-            <span>Shelters</span>
-          </button>
-
-          <button
-            onClick={() => handleToggleLayer("substation")}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono font-medium transition-all cursor-pointer border ${
-              visibleLayers.substation
-                ? "bg-amber-950/60 text-amber-300 border-amber-500/50 shadow-[0_0_8px_rgba(255,145,0,0.3)]"
-                : "bg-[#050B14] text-slate-500 border-slate-800"
-            }`}
-          >
-            <Zap className="w-3 h-3 text-amber-400" />
-            <span>Substations</span>
-          </button>
-
-          <button
-            onClick={() => handleToggleLayer("highway")}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono font-medium transition-all cursor-pointer border ${
-              visibleLayers.highway
-                ? "bg-cyan-950/60 text-cyan-300 border-cyan-500/50 shadow-[0_0_8px_rgba(0,242,254,0.3)]"
-                : "bg-[#050B14] text-slate-500 border-slate-800"
-            }`}
-          >
-            <Milestone className="w-3 h-3 text-cyan-400" />
-            <span>Highways</span>
-          </button>
-        </div>
-
-      </div>
-
-      {/* Main Interactive Map Viewport */}
-      <div className="relative flex-1 w-full bg-[#03070E] overflow-hidden select-none min-h-[340px]">
-        
+      {/* Main Interactive Map Viewport (Edge-to-Edge with Scroll Zoom & Drag Pan) */}
+      <div 
+        ref={mapViewportRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={(e) => {
+          if ((e.nativeEvent as any).__handledByMap) return;
+          const target = e.target as HTMLElement | null;
+          if (target?.closest(".symbology-legend-card")) return;
+          const zoomDelta = e.deltaY < 0 ? 1 : -1;
+          zoomAtPoint(zoomDelta, e.clientX, e.clientY);
+        }}
+        className={`relative flex-1 w-full bg-[#03070E] overflow-hidden select-none min-h-[380px] lg:min-h-[460px] ${
+          isDragging ? "cursor-grabbing" : "cursor-grab"
+        }`}
+      >
         {/* SVG Geospatial Canvas */}
         <svg
           viewBox="0 0 1000 650"
           className="w-full h-full object-cover"
-          preserveAspectRatio="xMidYMid meet"
+          preserveAspectRatio="xMidYMid slice"
         >
           <defs>
             {/* Ocean Depth Gradient */}
@@ -298,432 +541,641 @@ export function CoastalInundationMap({
             </pattern>
           </defs>
 
-          {/* Deep Ocean Base (Bay of Bengal) */}
-          <rect width="1000" height="650" fill="url(#bayOceanGrad)" />
-          <rect width="1000" height="650" fill="url(#radarGrid)" />
+          {/* Master Zoom & Pan Transform Group */}
+          <g
+            transform={`translate(${500 + panX}, ${325 + panY}) scale(${zoom}) translate(-500, -325)`}
+          >
+            {/* Deep Bay Ocean Base (Seamless Extended Coverage) */}
+            <rect x="-2000" y="-2000" width="5000" height="5000" fill="url(#bayOceanGrad)" />
 
-          {/* Bathymetry Depth Contours in Bay of Bengal */}
-          <path
-            d="M 450 650 Q 600 500 700 350 T 950 150"
-            fill="none"
-            stroke="rgba(0, 242, 254, 0.12)"
-            strokeWidth="1.5"
-            strokeDasharray="4 6"
-          />
-          <text x="710" y="370" fill="rgba(0,242,254,0.3)" fontSize="10" fontFamily="monospace">
-            200m Continental Shelf Edge
-          </text>
+            {/* Radar Bathymetry Grid (Seamless Extended Coverage) */}
+            <rect x="-2000" y="-2000" width="5000" height="5000" fill="url(#radarGrid)" />
 
-          <path
-            d="M 520 650 Q 680 480 780 300 T 1000 80"
-            fill="none"
-            stroke="rgba(0, 242, 254, 0.08)"
-            strokeWidth="1"
-            strokeDasharray="2 4"
-          />
-          <text x="800" y="270" fill="rgba(0,242,254,0.25)" fontSize="9" fontFamily="monospace">
-            1000m Deep Abyssal Plain
-          </text>
-
-          {/* Coastal Landmass (Odisha & West Bengal Shoreline) */}
-          {/* Defined from SW (Ganjam) -> Puri -> Paradip -> Kendrapara -> Balasore -> Digha -> Sundarbans */}
-          <path
-            d="
-              M 0 0
-              L 0 650
-              L 260 650
-              C 300 580, 360 540, 420 510
-              C 480 490, 560 480, 620 430
-              C 670 390, 660 330, 670 270
-              C 690 220, 750 190, 810 160
-              C 880 130, 930 110, 1000 80
-              L 1000 0
-              Z
-            "
-            fill="url(#coastalLandGrad)"
-            stroke="#1D3E35"
-            strokeWidth="1.5"
-          />
-
-          {/* Estuaries, Rivers & Tidal Inlets (Mahanadi, Baitarani, Subarnarekha, Hooghly) */}
-          <path
-            d="M 280 340 Q 420 420 620 430"
-            fill="none"
-            stroke="#0B2B4A"
-            strokeWidth="5"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 330 250 Q 520 320 670 270"
-            fill="none"
-            stroke="#0B2B4A"
-            strokeWidth="3.5"
-          />
-          <path
-            d="M 450 150 Q 620 180 810 160"
-            fill="none"
-            stroke="#0B2B4A"
-            strokeWidth="4"
-          />
-
-          {/* Dynamic Surge Reach Contours (Toggled by user) */}
-          {/* Contour 0.5m: Beachfront wash over */}
-          {visibleContours[0.5] && (
+            {/* Coastal Landmass (Odisha & West Bengal shoreline polygon - Extended) */}
             <path
               d="
-                M 270 650
-                C 310 575, 370 535, 430 505
-                C 490 485, 570 475, 630 425
-                C 680 385, 670 325, 680 265
-                C 700 215, 760 185, 820 155
-                C 890 125, 940 105, 1000 75
+                M -2000 -2000
+                L 2000 -2000
+                L 1000 50
+                C 920 70, 850 110, 780 140
+                C 720 165, 660 195, 640 245
+                C 630 305, 635 365, 590 405
+                C 530 455, 450 468, 390 488
+                C 330 520, 270 560, 230 650
+                C 190 730, 150 820, 100 2000
+                L -2000 2000
+                Z
               "
-              fill="none"
-              stroke="#00F2FE"
-              strokeWidth="3.5"
-              strokeOpacity="0.8"
-              strokeDasharray="8 4"
+              fill="url(#coastalLandGrad)"
+              stroke="#1E3E34"
+              strokeWidth="2"
             />
-          )}
 
-          {/* Contour 1.5m: Roadway inundation zone */}
-          {visibleContours[1.5] && (
+            {/* Shoreline Foam Glow */}
             <path
               d="
-                M 250 650
-                C 290 570, 350 530, 410 498
-                C 470 478, 550 468, 610 415
-                C 655 375, 650 315, 660 255
-                C 680 205, 740 175, 800 148
-                C 870 118, 920  98, 1000 68
+                M 1000 50
+                C 920 70, 850 110, 780 140
+                C 720 165, 660 195, 640 245
+                C 630 305, 635 365, 590 405
+                C 530 455, 450 468, 390 488
+                C 330 520, 270 560, 230 650
+                C 190 730, 150 820, 100 2000
               "
               fill="none"
-              stroke="#FF9100"
-              strokeWidth="3"
-              strokeOpacity="0.85"
+              stroke="#10E7A2"
+              strokeWidth="2"
+              strokeOpacity="0.45"
             />
-          )}
 
-          {/* Contour 3.0m: Structural flooding ground zero */}
-          {visibleContours[3.0] && (
-            <path
-              d="
-                M 230 650
-                C 270 560, 330 520, 390 488
-                C 450 468, 530 455, 590 405
-                C 635 365, 630 305, 640 245
-                C 660 195, 720 165, 780 138
-                C 850 108, 900  88, 1000 58
-              "
-              fill="none"
-              stroke="#D50000"
-              strokeWidth="4"
-              strokeOpacity="0.9"
-            />
-          )}
-
-          {/* Contour 5.0m: Extreme saltwater reach */}
-          {visibleContours[5.0] && (
-            <path
-              d="
-                M 210 650
-                C 250 550, 310 510, 370 478
-                C 430 458, 510 445, 570 392
-                C 615 352, 610 292, 620 232
-                C 640 182, 700 152, 760 126
-                C 830  96, 880  76, 1000 46
-              "
-              fill="none"
-              stroke="#E040FB"
-              strokeWidth="3"
-              strokeOpacity="0.85"
-              strokeDasharray="6 3"
-            />
-          )}
-
-          {/* Active Surge Inundation Plume (Simulated Animated Saline Wash over Puri-Paradip) */}
-          <polygon
-            points="390,488 470,470 630,425 610,415 570,392 410,498"
-            fill="url(#surgeWaveGrad3m)"
-            className="animate-pulse"
-          />
-
-          {/* Cyclone MOCHA Eye Center & Eye-Wall Approach Vector */}
-          <g transform="translate(680, 510)">
-            {/* Outer Spiral Bands */}
-            <circle r="60" fill="none" stroke="rgba(213,0,0,0.3)" strokeWidth="1.5" strokeDasharray="6 6" />
-            <circle r="40" fill="none" stroke="rgba(255,145,0,0.4)" strokeWidth="2" strokeDasharray="4 4" />
-            <circle r="22" fill="none" stroke="rgba(0,242,254,0.6)" strokeWidth="2.5" />
-            
-            {/* Eye core */}
-            <circle r="9" fill="#050B14" stroke="#D50000" strokeWidth="3" className="animate-ping opacity-60" />
-            <circle r="6" fill="#D50000" />
-
-            {/* Approach Vector Arrow to Puri (dx: -260, dy: -60) */}
-            <line x1="0" y1="0" x2="-240" y2="-65" stroke="#FF4D4D" strokeWidth="2.5" strokeDasharray="6 4" />
-            <polygon points="-240,-65 -225,-60 -230,-75" fill="#FF4D4D" />
-
-            <text x="14" y="5" fill="#FF4D4D" fontSize="12" fontWeight="bold" fontFamily="monospace">
-              MOCHA Eye (944 hPa)
-            </text>
-            <text x="14" y="20" fill="#00F2FE" fontSize="9" fontFamily="monospace">
-              Speed: 18 km/h NW
-            </text>
-          </g>
-
-          {/* District Spatial Boundary Outlines & Labels */}
-          {/* Puri District Zone */}
-          <g 
-            className="cursor-pointer group"
-            onClick={() => onSelectDistrictById("od-puri")}
-          >
-            <circle 
-              cx="410" 
-              cy="500" 
-              r={selectedDistrict?.id === "od-puri" ? "42" : "32"} 
-              fill={selectedDistrict?.id === "od-puri" ? "rgba(213,0,0,0.28)" : "rgba(213,0,0,0.12)"}
-              stroke="#D50000" 
-              strokeWidth={selectedDistrict?.id === "od-puri" ? "3" : "1.5"}
-              strokeDasharray="4 3"
-            />
-            <text x="385" y="475" fill="#FFFFFF" fontSize="12" fontWeight="bold" fontFamily="sans-serif">
-              PURI (GROUND ZERO)
-            </text>
-            <text x="385" y="490" fill="#FF5E36" fontSize="9" fontFamily="monospace">
-              Peak: 210 km/h • Surge +3.4m
-            </text>
-          </g>
-
-          {/* Jagatsinghpur (Paradip) District Zone */}
-          <g 
-            className="cursor-pointer group"
-            onClick={() => onSelectDistrictById("od-jagatsinghpur")}
-          >
-            <circle 
-              cx="610" 
-              cy="430" 
-              r={selectedDistrict?.id === "od-jagatsinghpur" ? "38" : "28"}
-              fill={selectedDistrict?.id === "od-jagatsinghpur" ? "rgba(213,0,0,0.28)" : "rgba(213,0,0,0.12)"}
-              stroke="#D50000" 
-              strokeWidth={selectedDistrict?.id === "od-jagatsinghpur" ? "3" : "1.5"}
-              strokeDasharray="4 3"
-            />
-            <text x="585" y="405" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="sans-serif">
-              PARADIP PORT
-            </text>
-            <text x="585" y="418" fill="#FF9100" fontSize="9" fontFamily="monospace">
-              Peak: 195 km/h • Surge +3.1m
-            </text>
-          </g>
-
-          {/* Kendrapara District Zone */}
-          <g 
-            className="cursor-pointer group"
-            onClick={() => onSelectDistrictById("od-kendrapara")}
-          >
-            <circle 
-              cx="570" 
-              cy="340" 
-              r={selectedDistrict?.id === "od-kendrapara" ? "35" : "25"}
-              fill={selectedDistrict?.id === "od-kendrapara" ? "rgba(255,145,0,0.25)" : "rgba(255,145,0,0.08)"}
-              stroke="#FF9100" 
-              strokeWidth={selectedDistrict?.id === "od-kendrapara" ? "2.5" : "1.2"}
-              strokeDasharray="4 3"
-            />
-            <text x="540" y="325" fill="#CBD5E1" fontSize="10" fontWeight="bold" fontFamily="sans-serif">
-              KENDRAPARA
-            </text>
-          </g>
-
-          {/* Balasore District Zone */}
-          <g 
-            className="cursor-pointer group"
-            onClick={() => onSelectDistrictById("od-balasore")}
-          >
-            <circle 
-              cx="700" 
-              cy="210" 
-              r={selectedDistrict?.id === "od-balasore" ? "32" : "22"}
-              fill="rgba(0,242,254,0.08)" 
-              stroke="#00F2FE" 
-              strokeWidth="1.2"
-              strokeDasharray="3 3"
-            />
-            <text x="670" y="195" fill="#CBD5E1" fontSize="10" fontWeight="bold" fontFamily="sans-serif">
-              BALASORE (CHANDIPUR)
-            </text>
-          </g>
-
-          {/* Purba Medinipur (Digha) Zone */}
-          <g 
-            className="cursor-pointer group"
-            onClick={() => onSelectDistrictById("wb-purba-medinipur")}
-          >
-            <circle 
-              cx="790" 
-              cy="160" 
-              r={selectedDistrict?.id === "wb-purba-medinipur" ? "36" : "26"}
-              fill={selectedDistrict?.id === "wb-purba-medinipur" ? "rgba(213,0,0,0.28)" : "rgba(213,0,0,0.12)"}
-              stroke="#D50000" 
-              strokeWidth={selectedDistrict?.id === "wb-purba-medinipur" ? "3" : "1.5"}
-              strokeDasharray="4 3"
-            />
-            <text x="760" y="145" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="sans-serif">
-              DIGHA (WB)
-            </text>
-          </g>
-
-          {/* Highway Lines on Canvas */}
-          {visibleLayers.highway && (
-            <>
-              {/* NH-316 Puri -> Inland Corridor */}
+            {/* 4 Surge Inundation Extent Contours */}
+            {/* Contour 0.5m: Lowland tidal wash */}
+            {visibleContours[0.5] && (
               <path
-                d="M 400 500 Q 340 460 260 410"
+                d="
+                  M 250 650
+                  C 290 575, 350 535, 410 500
+                  C 470 480, 550 468, 610 418
+                  C 655 378, 650 318, 660 258
+                  C 680 208, 740 178, 800 150
+                  C 870 120, 920 100, 1000 70
+                "
+                fill="none"
+                stroke="#00F2FE"
+                strokeWidth="2.5"
+                strokeOpacity="0.8"
+                strokeDasharray="4 2"
+              />
+            )}
+
+            {/* Contour 1.5m: Critical roadway cutoff */}
+            {visibleContours[1.5] && (
+              <path
+                d="
+                  M 240 650
+                  C 280 568, 340 528, 400 494
+                  C 460 474, 540 461, 600 411
+                  C 645 371, 640 311, 650 251
+                  C 670 201, 730 171, 790 144
+                  C 860 114, 910  94, 1000 64
+                "
                 fill="none"
                 stroke="#FF9100"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeDasharray="6 4"
+                strokeWidth="3"
+                strokeOpacity="0.85"
               />
-              <text x="300" y="445" fill="#FF9100" fontSize="9" fontWeight="bold" fontFamily="monospace">
-                NH-316 (WATCH 0.3m)
-              </text>
+            )}
 
-              {/* SH-12 Paradip Arterial (Flooded) */}
+            {/* Contour 3.0m: Structural flooding ground zero */}
+            {visibleContours[3.0] && (
               <path
-                d="M 610 430 Q 520 420 440 380"
+                d="
+                  M 230 650
+                  C 270 560, 330 520, 390 488
+                  C 450 468, 530 455, 590 405
+                  C 635 365, 630 305, 640 245
+                  C 660 195, 720 165, 780 138
+                  C 850 108, 900  88, 1000 58
+                "
                 fill="none"
                 stroke="#D50000"
                 strokeWidth="4"
-                strokeLinecap="round"
+                strokeOpacity="0.9"
               />
-              <text x="500" y="415" fill="#FF4D4D" fontSize="9" fontWeight="bold" fontFamily="monospace">
-                SH-12 (FLOODED 0.8m)
-              </text>
+            )}
 
-              {/* NH-16 Main Inland Evacuation Artery (Dry corridor) */}
+            {/* Contour 5.0m: Extreme saltwater reach */}
+            {visibleContours[5.0] && (
               <path
-                d="M 260 410 Q 480 300 700 200"
+                d="
+                  M 210 650
+                  C 250 550, 310 510, 370 478
+                  C 430 458, 510 445, 570 392
+                  C 615 352, 610 292, 620 232
+                  C 640 182, 700 152, 760 126
+                  C 830  96, 880  76, 1000 46
+                "
                 fill="none"
-                stroke="#00E676"
-                strokeWidth="3.5"
-                strokeLinecap="round"
+                stroke="#E040FB"
+                strokeWidth="3"
+                strokeOpacity="0.85"
+                strokeDasharray="6 3"
               />
-              <text x="460" y="280" fill="#00E676" fontSize="9" fontWeight="bold" fontFamily="monospace">
-                NH-16 EXPRESSWAY (DRY EVAC ARTERY)
+            )}
+
+            {/* Active Surge Inundation Plume */}
+            <polygon
+              points="390,488 470,470 630,425 610,415 570,392 410,498"
+              fill="url(#surgeWaveGrad3m)"
+              className="animate-pulse"
+            />
+
+            {/* Cyclone MOCHA Eye Center & Approach Vector */}
+            <g transform="translate(680, 510)">
+              <circle r="60" fill="none" stroke="rgba(213,0,0,0.3)" strokeWidth="1.5" strokeDasharray="6 6" />
+              <circle r="40" fill="none" stroke="rgba(255,145,0,0.4)" strokeWidth="2" strokeDasharray="4 4" />
+              <circle r="22" fill="none" stroke="rgba(0,242,254,0.6)" strokeWidth="2.5" />
+              
+              <circle r="9" fill="#050B14" stroke="#D50000" strokeWidth="3" className="animate-ping opacity-60" />
+              <circle r="6" fill="#D50000" />
+
+              <line x1="0" y1="0" x2="-240" y2="-65" stroke="#FF4D4D" strokeWidth="2.5" strokeDasharray="6 4" />
+              <polygon points="-240,-65 -225,-60 -230,-75" fill="#FF4D4D" />
+
+              <text x="14" y="5" fill="#FF4D4D" fontSize="12" fontWeight="bold" fontFamily="monospace">
+                MOCHA Eye (944 hPa)
               </text>
-            </>
-          )}
+              <text x="14" y="20" fill="#00F2FE" fontSize="9" fontFamily="monospace">
+                Approach: 18 km/h NW
+              </text>
+            </g>
 
-          {/* Interactive Infrastructure Node Pins */}
-          {displayedNodes.map((node) => {
-            const cx = node.mapX * 10;
-            const cy = node.mapY * 6.5;
-            const isHovered = activeNode?.id === node.id;
-            const isTargetDistrict = selectedDistrict?.id === node.districtId;
+            {/* District Spatial Boundary Outlines & Labels */}
+            {/* Puri District Zone */}
+            <g 
+              className="cursor-pointer group"
+              onClick={() => {
+                if (hasMovedRef.current) return;
+                onSelectDistrictById("od-puri");
+              }}
+            >
+              <circle 
+                cx="410" 
+                cy="500" 
+                r={selectedDistrict?.id === "od-puri" ? "42" : "32"} 
+                fill={selectedDistrict?.id === "od-puri" ? "rgba(213,0,0,0.3)" : "rgba(213,0,0,0.12)"}
+                stroke="#D50000" 
+                strokeWidth={selectedDistrict?.id === "od-puri" ? "3" : "1.5"}
+                strokeDasharray="4 3"
+              />
+              <text x="385" y="475" fill="#FFFFFF" fontSize="12" fontWeight="bold" fontFamily="sans-serif">
+                PURI (GROUND ZERO)
+              </text>
+              <text x="385" y="490" fill="#FF5E36" fontSize="9" fontFamily="monospace">
+                Peak: 210 km/h • Surge +3.4m
+              </text>
+            </g>
 
-            // Pin styling based on infrastructure type
-            let pinColor = "#00F2FE";
-            let pinBg = "rgba(0, 242, 254, 0.2)";
-            if (node.type === "hospital") {
-              pinColor = "#EF4444";
-              pinBg = "rgba(239, 68, 68, 0.3)";
-            } else if (node.type === "shelter") {
-              pinColor = "#10E7A2";
-              pinBg = "rgba(16, 231, 162, 0.3)";
-            } else if (node.type === "substation") {
-              pinColor = "#F59E0B";
-              pinBg = "rgba(245, 158, 11, 0.3)";
-            } else if (node.type === "highway") {
-              pinColor = node.status === "critical" ? "#DC2626" : "#22D3EE";
-              pinBg = "rgba(34, 211, 238, 0.3)";
-            }
+            {/* Jagatsinghpur (Paradip) District Zone */}
+            <g 
+              className="cursor-pointer group"
+              onClick={() => {
+                if (hasMovedRef.current) return;
+                onSelectDistrictById("od-jagatsinghpur");
+              }}
+            >
+              <circle 
+                cx="590" 
+                cy="410" 
+                r={selectedDistrict?.id === "od-jagatsinghpur" ? "40" : "30"} 
+                fill={selectedDistrict?.id === "od-jagatsinghpur" ? "rgba(213,0,0,0.3)" : "rgba(213,0,0,0.12)"}
+                stroke="#D50000" 
+                strokeWidth={selectedDistrict?.id === "od-jagatsinghpur" ? "3" : "1.5"}
+                strokeDasharray="4 3"
+              />
+              <text x="560" y="388" fill="#FFFFFF" fontSize="12" fontWeight="bold" fontFamily="sans-serif">
+                PARADIP PORT
+              </text>
+              <text x="560" y="402" fill="#FF9100" fontSize="9" fontFamily="monospace">
+                Peak: 195 km/h • Surge +3.1m
+              </text>
+            </g>
 
-            return (
-              <g
-                key={node.id}
-                className="cursor-pointer transition-transform"
-                onClick={() => {
-                  setActiveNode(node);
-                  onSelectDistrictById(node.districtId);
-                }}
-                onMouseEnter={() => setActiveNode(node)}
-              >
-                {/* Halo for target district */}
-                {isTargetDistrict && (
-                  <circle
-                    cx={cx}
-                    cy={cy}
-                    r={isHovered ? 18 : 14}
-                    fill={pinBg}
-                    stroke={pinColor}
-                    strokeWidth="1.5"
-                    className="animate-pulse"
-                  />
-                )}
+            {/* Kendrapara District Zone */}
+            <g 
+              className="cursor-pointer group"
+              onClick={() => {
+                if (hasMovedRef.current) return;
+                onSelectDistrictById("od-kendrapara");
+              }}
+            >
+              <circle 
+                cx="635" 
+                cy="310" 
+                r={selectedDistrict?.id === "od-kendrapara" ? "36" : "26"} 
+                fill={selectedDistrict?.id === "od-kendrapara" ? "rgba(255,145,0,0.3)" : "rgba(255,145,0,0.12)"}
+                stroke="#FF9100" 
+                strokeWidth={selectedDistrict?.id === "od-kendrapara" ? "2.5" : "1.2"}
+              />
+              <text x="615" y="290" fill="#E2E8F0" fontSize="11" fontWeight="bold" fontFamily="sans-serif">
+                KENDRAPARA
+              </text>
+            </g>
 
-                {/* Core Pin Dot */}
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r={isHovered ? 8 : 6}
-                  fill={pinColor}
-                  stroke="#050B14"
-                  strokeWidth="2"
-                />
+            {/* Balasore District Zone */}
+            <g 
+              className="cursor-pointer group"
+              onClick={() => {
+                if (hasMovedRef.current) return;
+                onSelectDistrictById("od-balasore");
+              }}
+            >
+              <circle 
+                cx="760" 
+                cy="150" 
+                r={selectedDistrict?.id === "od-balasore" ? "34" : "24"} 
+                fill={selectedDistrict?.id === "od-balasore" ? "rgba(255,214,0,0.3)" : "rgba(255,214,0,0.1)"}
+                stroke="#FFD600" 
+                strokeWidth={selectedDistrict?.id === "od-balasore" ? "2.5" : "1.2"}
+              />
+              <text x="735" y="135" fill="#E2E8F0" fontSize="11" fontWeight="bold" fontFamily="sans-serif">
+                BALASORE (Chandipur)
+              </text>
+            </g>
 
-                {/* Tiny Icon representation in SVG */}
-                <text
-                  x={cx + 9}
-                  y={cy + 4}
-                  fill="#FFFFFF"
-                  fontSize="8.5"
-                  fontFamily="monospace"
-                  fontWeight="bold"
-                  opacity={isHovered || isTargetDistrict ? 1 : 0.8}
+            {/* Critical Infrastructure Interactive Node Pins */}
+            {displayedNodes.map((node) => {
+              const isHovered = activeNode?.id === node.id;
+              const posX = (node.mapX / 100) * 1000;
+              const posY = (node.mapY / 100) * 650;
+              return (
+                <g
+                  key={node.id}
+                  transform={`translate(${posX}, ${posY})`}
+                  className="cursor-pointer group"
+                  onClick={() => {
+                    if (hasMovedRef.current) return;
+                    setActiveNode(node);
+                  }}
                 >
-                  {node.name.length > 22 ? `${node.name.slice(0, 20)}...` : node.name}
-                </text>
-              </g>
-            );
-          })}
+                  {/* Ping wave for critical flood exposure */}
+                  {node.status === "critical" && (
+                    <circle r="14" fill="none" stroke="#D50000" strokeWidth="1.5" className="animate-ping opacity-60" />
+                  )}
 
+                  {/* Node Outer Circle */}
+                  <circle
+                    r={isHovered ? "11" : "8"}
+                    fill={
+                      node.type === "hospital"
+                        ? "#D50000"
+                        : node.type === "shelter"
+                        ? "#00E676"
+                        : node.type === "substation"
+                        ? "#FF9100"
+                        : "#00F2FE"
+                    }
+                    stroke="#FFFFFF"
+                    strokeWidth={isHovered ? "2.5" : "1.5"}
+                    className="transition-all duration-200"
+                  />
+
+                  {/* Inner status dot */}
+                  <circle r="3.5" fill="#050B14" />
+
+                  {/* Node Label on Hover or Critical */}
+                  {(isHovered || node.status === "critical") && (
+                    <text
+                      x="12"
+                      y="4"
+                      fill="#FFFFFF"
+                      fontSize="9"
+                      fontWeight="bold"
+                      fontFamily="monospace"
+                      className="drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]"
+                    >
+                      {node.name}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
         </svg>
 
-        {/* Compass Rose Widget in Bottom Right */}
-        <div className="absolute bottom-3 right-3 p-2 rounded-lg bg-[#050B14]/85 border border-[#1E3252] backdrop-blur-md flex flex-col items-center pointer-events-none">
-          <Compass className="w-5 h-5 text-[#00F2FE]" />
-          <span className="text-[9px] font-mono font-bold text-white mt-0.5">N</span>
-          <span className="text-[7px] font-mono text-slate-400">Bay of Bengal</span>
+        {/* Interactive Floating Zoom & Navigation Controls HUD */}
+        <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 p-1 rounded-xl bg-[#050B14]/90 border border-[rgba(0,242,254,0.35)] backdrop-blur-xl shadow-xl">
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="w-7 h-7 rounded-lg bg-[#0F1B2F] hover:bg-[#00F2FE]/20 border border-[rgba(0,242,254,0.25)] hover:border-[#00F2FE] text-[#00F2FE] flex items-center justify-center transition-colors cursor-pointer text-sm font-bold font-mono"
+            title="Zoom In (or Mouse Scroll Up)"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleResetZoom}
+            className="h-7 px-2 rounded-lg bg-[#0F1B2F] hover:bg-[#00F2FE]/20 border border-[rgba(0,242,254,0.25)] hover:border-[#00F2FE] text-[#00F2FE] flex items-center gap-1 justify-center transition-colors cursor-pointer text-[10px] font-mono font-bold"
+            title="Reset Map Zoom & Pan"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span>{Math.round(zoom * 100)}%</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="w-7 h-7 rounded-lg bg-[#0F1B2F] hover:bg-[#00F2FE]/20 border border-[rgba(0,242,254,0.25)] hover:border-[#00F2FE] text-[#00F2FE] flex items-center justify-center transition-colors cursor-pointer text-sm font-bold font-mono"
+            title="Zoom Out (or Mouse Scroll Down)"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        {/* Legend Overlay Card in Top Left */}
-        <div className="absolute top-3 left-3 p-2.5 rounded-lg bg-[#050B14]/90 border border-[#1E3252] backdrop-blur-md max-w-[210px] text-[10px] font-mono space-y-1 hidden sm:block pointer-events-none">
-          <div className="text-[10px] font-bold text-white uppercase tracking-wider flex items-center gap-1">
-            <Info className="w-3 h-3 text-[#00F2FE]" />
-            <span>Map Symbology</span>
+
+
+        {/* Floating Expandable Symbology Card */}
+        {isLegendOpen && (
+          <div className="symbology-legend-card absolute top-3 left-3 w-80 sm:w-[350px] max-h-[calc(100%-24px)] flex flex-col rounded-2xl bg-[#050B14]/95 border border-[rgba(0,242,254,0.35)] backdrop-blur-2xl shadow-[0_16px_48px_rgba(0,0,0,0.85)] z-30 overflow-hidden animate-in fade-in zoom-in-95">
+            {/* Background Noise Effect */}
+            <Noise
+              patternSize={250}
+              patternScaleX={1.2}
+              patternScaleY={1.2}
+              patternRefreshInterval={2}
+              patternAlpha={15}
+            />
+
+            {/* Header */}
+            <div className="relative z-10 px-3.5 py-3 border-b border-[rgba(0,242,254,0.2)] bg-[#07111F]/80 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-[#00F2FE]/10 border border-[#00F2FE]/30 flex items-center justify-center shrink-0">
+                  <Info className="w-3.5 h-3.5 text-[#00F2FE]" />
+                </div>
+                <div>
+                  <div className="font-bold text-white font-rajdhani text-sm uppercase tracking-wider leading-none">
+                    Map Symbology & Legend
+                  </div>
+                  <div className="text-[10px] font-mono text-[#00F2FE] leading-tight mt-0.5">
+                    Visual indicators & operational meanings
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsLegendOpen(false)}
+                className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer text-xs"
+                title="Close Symbology Legend"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Scrollable Content Body */}
+            <div 
+              className="relative z-10 p-3.5 space-y-4 overflow-y-auto text-[11px] font-mono"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "rgba(0,242,254,0.35) transparent"
+              }}
+            >
+              {/* 1. Critical Infrastructure Section */}
+              <div className="space-y-2.5">
+                <div className="text-[10px] font-bold text-[#00F2FE] uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-slate-800/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00F2FE]" />
+                  Critical Infrastructure Pins
+                </div>
+
+                {/* Hospital */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 w-4 h-4 rounded-full bg-[#D50000] border border-white flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(213,0,0,0.5)]">
+                    <span className="w-1 h-1 rounded-full bg-[#050B14]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span>Hospital (Flood Risk)</span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-red-950/70 text-red-300 border border-red-500/40">CRITICAL</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Emergency medical facilities exposed to saltwater inundation; ICU generator standby.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Cyclone Shelter */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 w-4 h-4 rounded-full bg-[#00E676] border border-white flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(0,230,118,0.5)]">
+                    <span className="w-1 h-1 rounded-full bg-[#050B14]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span>Cyclone Shelter (Active)</span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-500/40">SAFE HAVEN</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Elevated reinforced concrete shelter with designated capacity & relief supply stocks.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 33kV Substation */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 w-4 h-4 rounded-full bg-[#FF9100] border border-white flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(255,145,0,0.5)]">
+                    <span className="w-1 h-1 rounded-full bg-[#050B14]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span>Power Substation (Cutoff Risk)</span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-950/70 text-amber-300 border border-amber-500/40">GRID CUTOFF</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      33kV/132kV transmission switchyard facing precautionary shutdown to prevent electrocution.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Evacuation Corridor */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 w-4 h-4 rounded-full bg-[#00F2FE] border border-white flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(0,242,254,0.5)]">
+                    <span className="w-1 h-1 rounded-full bg-[#050B14]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span>Evacuation Corridor (Highway)</span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/70 text-cyan-300 border border-cyan-500/40">ARTERIAL</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Designated national/state transit highways (NH-16 / NH-316) for vehicular evacuation.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Active Inundation Alarm Ping */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 relative flex h-4 w-4 items-center justify-center shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 border border-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span>Critical Inundation Alarm</span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-red-950/70 text-red-300 border border-red-500/40">PULSING</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Active flood alert indicating water level currently breaching site safety limits.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Surge Inundation Contours Section */}
+              <div className="space-y-2.5">
+                <div className="text-[10px] font-bold text-[#00F2FE] uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-slate-800/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00F2FE]" />
+                  Surge Inundation Contours
+                </div>
+
+                {/* 5.0m Extreme */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-1.5 w-6 h-0 border-t-2 border-dashed border-[#E040FB] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span className="text-fuchsia-300">5.0m Extreme Surge Contour</span>
+                      <span className="text-[9px] font-mono text-fuchsia-400">PURPLE</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Maximum saltwater reach during high-tide peak; severe deep-inland breach.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3.0m Threat */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-1.5 w-6 h-1 bg-[#D50000] rounded shrink-0 shadow-[0_0_6px_rgba(213,0,0,0.6)]" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span className="text-red-300">3.0m Threat Level (Ground Zero)</span>
+                      <span className="text-[9px] font-mono text-red-400">RED SOLID</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Structural flooding zone; ground floors submerged with catastrophic wall damages.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 1.5m Roadway */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-1.5 w-6 h-0.5 bg-[#FF9100] rounded shrink-0 shadow-[0_0_6px_rgba(255,145,0,0.6)]" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span className="text-amber-300">1.5m Roadway Cutoff Line</span>
+                      <span className="text-[9px] font-mono text-amber-400">ORANGE SOLID</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Road impassability threshold; vehicle exhaust submerged and transit blocked.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 0.5m Tidal Wash */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-1.5 w-6 h-0 border-t-2 border-dashed border-[#00F2FE] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span className="text-cyan-300">0.5m Tidal Wash Extent</span>
+                      <span className="text-[9px] font-mono text-cyan-400">CYAN DASHED</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Lowland sea wash line; coastal mudflats, estuaries and salt pan overtopping.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Active Surge Plume */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 w-6 h-3 rounded bg-gradient-to-r from-red-600/60 to-purple-600/40 border border-red-500/50 animate-pulse shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span className="text-rose-300">Active Surge Inundation Plume</span>
+                      <span className="text-[9px] font-mono text-rose-400">LIVE PLUME</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Live animated hydrodynamic plume modeling current surging saltwater front.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Storm Center & Threat Sectors */}
+              <div className="space-y-2.5">
+                <div className="text-[10px] font-bold text-[#00F2FE] uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-slate-800/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00F2FE]" />
+                  Storm Dynamics & Threat Sectors
+                </div>
+
+                {/* MOCHA Eye */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 w-5 h-5 rounded-full border border-red-500/40 flex items-center justify-center shrink-0">
+                    <div className="w-3.5 h-3.5 rounded-full border border-amber-500/50 flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#D50000]" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span className="text-red-400">Cyclone Eye Center (944 hPa)</span>
+                      <span className="text-[9px] font-mono text-red-400">EYEWALL</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Low-pressure eye vortex ringed by destructive eyewall winds (up to 210 km/h).
+                    </p>
+                  </div>
+                </div>
+
+                {/* Track Vector */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-1 flex items-center w-6 shrink-0">
+                    <span className="w-4 h-0 border-t-2 border-dashed border-[#FF4D4D]" />
+                    <span className="text-[#FF4D4D] text-[10px] -ml-1">▶</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span className="text-red-300">Projected Approach Track</span>
+                      <span className="text-[9px] font-mono text-cyan-400">18 km/h NW</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      AI and radar track vector forecasting movement direction toward landfall.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Ground Zero District */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 w-4 h-4 rounded-full border-2 border-dashed border-[#D50000] bg-red-950/40 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span>Ground Zero Sector (Puri / Paradip)</span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-red-950/70 text-red-300 border border-red-500/40">LANDFALL</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Primary landfall sector facing maximum sustained winds & surge exceeding 3.0m.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Secondary Threat Sector */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 w-4 h-4 rounded-full border-2 border-[#FFD600] bg-amber-950/30 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span>Secondary Warning Sector</span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-950/70 text-amber-300 border border-amber-500/40">HIGH RISK</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Flanking coastal districts under storm force squalls and moderate tidal inundation.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Shoreline */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-1.5 w-6 h-0.5 bg-[#10E7A2] shadow-[0_0_6px_#10E7A2] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-semibold text-xs leading-tight font-rajdhani flex items-center justify-between">
+                      <span className="text-emerald-300">Mean High-Water Shoreline</span>
+                      <span className="text-[9px] font-mono text-emerald-400">COAST</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-sans leading-snug mt-0.5">
+                      Baseline coastal boundary demarcating landmass from the Bay of Bengal ocean.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
-            <span>Hospital (Flood Risk)</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-            <span>Shelter (Elevated Ramp)</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-            <span>33kV Substation (Cutoff)</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2.5 h-0.5 bg-emerald-400 shrink-0" />
-            <span>Dry Evacuation Corridor</span>
-          </div>
-        </div>
+        )}
 
         {/* Selected Node Tactical Popover HUD */}
         {activeNode && (
-          <div className="absolute top-3 right-3 sm:right-16 z-20 w-72 sm:w-80 p-3.5 rounded-xl bg-[#0F1B2F]/95 border border-[#00F2FE]/40 backdrop-blur-xl shadow-[0_12px_36px_rgba(0,0,0,0.8)] text-xs animate-in fade-in zoom-in-95">
+          <div className="absolute top-3 right-3 sm:right-14 z-30 w-72 sm:w-80 p-3.5 rounded-2xl bg-[#0F1B2F]/95 border border-[#00F2FE]/40 backdrop-blur-2xl shadow-[0_16px_40px_rgba(0,0,0,0.9)] text-xs animate-in fade-in zoom-in-95">
             <div className="flex items-start justify-between gap-2 border-b border-slate-700/60 pb-2 mb-2">
               <div className="flex items-center gap-2">
                 {activeNode.type === "hospital" && <Hospital className="w-4 h-4 text-red-400" />}
@@ -801,25 +1253,19 @@ export function CoastalInundationMap({
                   </span>
                 </div>
               )}
-
-              {activeNode.detourRoute && (
-                <div className="pt-1 text-[10px] text-cyan-300/90 border-t border-slate-800">
-                  <strong className="text-white">Evac Detour:</strong> {activeNode.detourRoute}
-                </div>
-              )}
             </div>
 
-            {/* Quick Action Button */}
+            {/* Evacuation CTA */}
             {selectedDistrict && (
               <div className="mt-3 pt-2 border-t border-slate-700/60 flex items-center justify-between">
                 <span className="text-[10px] text-slate-400 font-mono">
-                  Target: {selectedDistrict.name}
+                  Sector: {selectedDistrict.name}
                 </span>
                 <button
                   onClick={() => onOpenEvacModal(selectedDistrict)}
-                  className="px-2.5 py-1 rounded bg-red-600/30 hover:bg-red-600/50 border border-red-500 text-red-200 text-[10px] font-mono font-bold transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-red-600/30 hover:bg-red-600/50 border border-red-500 text-red-200 text-[10px] font-mono font-bold transition-colors cursor-pointer"
                 >
-                  Trigger Evac
+                  Order Evacuation
                 </button>
               </div>
             )}
@@ -828,16 +1274,7 @@ export function CoastalInundationMap({
 
       </div>
 
-      {/* Footer Info Strip */}
-      <div className="px-3 py-2 bg-[#0F1B2F]/90 border-t border-[rgba(0,242,254,0.12)] flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Telemetry Source: INCOIS Storm Surge Hydrodynamic Model & IMD High-Resolution WRF</span>
-        </div>
-        <div className="text-slate-300">
-          Grid: 19.8°N, 85.8°E • Datum: WGS84
-        </div>
-      </div>
+
     </div>
   );
 }

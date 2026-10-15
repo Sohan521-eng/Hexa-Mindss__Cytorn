@@ -1,20 +1,22 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { gsap } from "gsap";
 import { 
-  AlertOctagon, 
   Clock, 
-  Compass, 
   Waves, 
   Wind, 
-  Bell, 
-  CheckCircle2, 
-  Info,
   Calendar,
-  Layers
+  Layers,
+  ArrowRight,
+  ShieldAlert
 } from "lucide-react";
-import { AlertStageNumber } from "./types";
+import Noise from "@/components/ui/Noise";
+import { ShinyBadge } from "@/components/ui/ShinyBadge";
+import { AlertStageNumber, AlertStageConfig } from "./types";
 import { IMD_ALERT_STAGES } from "./alertsData";
+
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? React.useLayoutEffect : useEffect;
 
 interface ImdWarningBannerProps {
   activeStage: AlertStageNumber;
@@ -25,16 +27,251 @@ interface ImdWarningBannerProps {
   lastIssuedIst?: string;
 }
 
+/* ─── Custom GSAP expanding bubble hook for Stage Pill buttons ─── */
+function useStagePillGsap(dep?: unknown) {
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const circleRef = useRef<HTMLSpanElement | null>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const layout = () => {
+      if (!active) return;
+      const circle = circleRef.current;
+      const btn = btnRef.current;
+      if (!circle || !btn) return;
+
+      const w = btn.offsetWidth || btn.getBoundingClientRect().width;
+      const h = btn.offsetHeight || btn.getBoundingClientRect().height;
+      if (!w || !h) return;
+
+      const R = ((w * w) / 4 + h * h) / (2 * h);
+      const D = Math.ceil(2 * R) + 2;
+      const delta = Math.ceil(R - Math.sqrt(Math.max(0, R * R - (w * w) / 4))) + 1;
+      const originY = D - delta;
+
+      circle.style.width = `${D}px`;
+      circle.style.height = `${D}px`;
+      circle.style.bottom = `-${delta}px`;
+
+      gsap.set(circle, {
+        xPercent: -50,
+        scale: 0,
+        transformOrigin: `50% ${originY}px`,
+      });
+
+      const label = btn.querySelector<HTMLElement>(".pill-label");
+      const hover = btn.querySelector<HTMLElement>(".pill-label-hover");
+
+      if (label) gsap.set(label, { y: 0 });
+      if (hover) gsap.set(hover, { y: h + 16, opacity: 0 });
+
+      tlRef.current?.kill();
+      const tl = gsap.timeline({ paused: true });
+
+      tl.to(circle, { scale: 1.35, xPercent: -50, duration: 1.2, ease: "power2.easeOut", overwrite: "auto" }, 0);
+      if (label) tl.to(label, { y: -(h + 10), duration: 1.2, ease: "power2.easeOut", overwrite: "auto" }, 0);
+      if (hover) {
+        gsap.set(hover, { y: Math.ceil(h + 20), opacity: 0 });
+        tl.to(hover, { y: 0, opacity: 1, duration: 1.2, ease: "power2.easeOut", overwrite: "auto" }, 0);
+      }
+      tlRef.current = tl;
+    };
+
+    layout();
+    const t1 = setTimeout(layout, 150);
+    const t2 = setTimeout(layout, 400);
+    const onResize = () => layout();
+    window.addEventListener("resize", onResize);
+    document.fonts?.ready.then(layout).catch(() => {});
+
+    return () => {
+      active = false;
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [dep]);
+
+  const handleEnter = () => {
+    tlRef.current?.tweenTo(tlRef.current.duration(), { duration: 0.3, ease: "power2.easeOut", overwrite: "auto" });
+  };
+  const handleLeave = () => {
+    tlRef.current?.tweenTo(0, { duration: 0.25, ease: "power2.easeOut", overwrite: "auto" });
+  };
+
+  return { btnRef, circleRef, handleEnter, handleLeave };
+}
+
+/* ─── Stage Pill Button matching StateSelectorPill styling and GSAP hover effect ─── */
+function StagePillButton({
+  cfg,
+  isSelected,
+  isLive,
+  onClick,
+}: {
+  cfg: AlertStageConfig;
+  isSelected: boolean;
+  isLive: boolean;
+  onClick: () => void;
+}) {
+  const { btnRef, circleRef, handleEnter, handleLeave } = useStagePillGsap(isSelected);
+  const hoverTextColor = cfg.stage === 1 || cfg.stage === 2 ? "#050B14" : "#FFFFFF";
+
+  return (
+    <button
+      ref={btnRef}
+      type="button"
+      onClick={onClick}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      className="relative overflow-hidden cursor-pointer select-none transition-all duration-300 w-full"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        height: "40px",
+        padding: "0 14px",
+        borderRadius: "0.75rem",
+        border: `1.5px solid ${isSelected ? cfg.colorHex : cfg.borderHex}`,
+        background: isSelected ? cfg.bgHex : "rgba(5, 11, 20, 0.72)",
+        boxShadow: isSelected
+          ? `0 8px 24px -2px rgba(0,0,0,0.85), 0 0 16px ${cfg.colorHex}45, inset 0 1px 0 rgba(255,255,255,0.4)`
+          : "0 4px 16px -2px rgba(0,0,0,0.85), 0 0 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        color: "#FFFFFF",
+        fontFamily: "var(--font-rajdhani, sans-serif)",
+        fontWeight: 700,
+        fontSize: "13px",
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
+      }}
+    >
+      {/* GSAP expanding bubble */}
+      <span
+        ref={circleRef}
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: "50%",
+          bottom: 0,
+          borderRadius: "50%",
+          background: cfg.colorHex,
+          zIndex: 1,
+          display: "block",
+          pointerEvents: "none",
+          willChange: "transform",
+          transform: "scale(0)",
+        }}
+      />
+
+      {/* Dual-label stack */}
+      <span
+        style={{
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          width: "100%",
+          lineHeight: 1,
+          zIndex: 2,
+        }}
+      >
+        {/* Default label (slides up on hover) */}
+        <span
+          className="pill-label"
+          style={{
+            position: "relative",
+            zIndex: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            lineHeight: 1,
+            willChange: "transform",
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{
+                backgroundColor: cfg.colorHex,
+                boxShadow: `0 0 8px ${cfg.colorHex}90`,
+              }}
+            />
+            <span className="font-rajdhani uppercase tracking-wider text-xs sm:text-[13px] font-bold text-white">
+              Stage {cfg.stage}
+            </span>
+          </div>
+
+          {isLive && (
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-red-600 text-white font-black tracking-wider animate-pulse ml-1.5 shadow-sm">
+              LIVE
+            </span>
+          )}
+        </span>
+
+        {/* Hover label (slides in from below) */}
+        <span
+          className="pill-label-hover"
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: "100%",
+            color: hoverTextColor,
+            zIndex: 3,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            lineHeight: 1,
+            willChange: "transform, opacity",
+            fontWeight: 800,
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: hoverTextColor }}
+            />
+            <span
+              className="font-rajdhani uppercase tracking-wider text-xs sm:text-[13px] font-extrabold"
+              style={{ color: hoverTextColor }}
+            >
+              Stage {cfg.stage}
+            </span>
+          </div>
+
+          {isLive && (
+            <span
+              className="text-[9px] font-mono px-1.5 py-0.5 rounded font-black tracking-wider ml-1.5 shadow-sm"
+              style={{
+                backgroundColor: hoverTextColor === "#FFFFFF" ? "#FFFFFF" : "#050B14",
+                color: hoverTextColor === "#FFFFFF" ? "#D50000" : "#FFFFFF",
+              }}
+            >
+              LIVE
+            </span>
+          )}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export function ImdWarningBanner({
   activeStage = 3,
   selectedStageFilter,
   onSelectStageFilter,
-  landfallTime = "Tomorrow 18:30 IST",
+  landfallTime = "Tomorrow 18:30 IST • Puri Coast",
   surgeHeightM = 3.4,
   lastIssuedIst = "06:00 IST",
 }: ImdWarningBannerProps) {
-  // Countdown to next mandated bulletin (3h cycle, e.g. 02h 44m 38s)
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(2 * 3600 + 44 * 60 + 52);
+  // Countdown to next mandated bulletin (3h cycle)
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(2 * 3600 + 44 * 60 + 38);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -43,228 +280,239 @@ export function ImdWarningBanner({
     return () => clearInterval(timer);
   }, []);
 
-  const formatCountdown = (totalSec: number) => {
-    const hrs = Math.floor(totalSec / 3600);
-    const mins = Math.floor((totalSec % 3600) / 60);
-    const secs = totalSec % 60;
-    return `${hrs.toString().padStart(2, "0")}h ${mins.toString().padStart(2, "0")}m ${secs.toString().padStart(2, "0")}s`;
-  };
+  const hours = Math.floor(secondsRemaining / 3600);
+  const minutes = Math.floor((secondsRemaining % 3600) / 60);
+  const seconds = secondsRemaining % 60;
+  const pad = (n: number) => n.toString().padStart(2, "0");
 
-  const currentStageConfig = IMD_ALERT_STAGES[activeStage];
-  const viewedStageConfig = IMD_ALERT_STAGES[selectedStageFilter];
+  const viewedStage = IMD_ALERT_STAGES[selectedStageFilter] || IMD_ALERT_STAGES[activeStage];
+
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const box1Ref = useRef<HTMLDivElement | null>(null);
+  const box2Ref = useRef<HTMLDivElement | null>(null);
+  const [maskStyle, setMaskStyle] = useState<React.CSSProperties>({});
+
+  // SVG mask with fill-rule="evenodd" to punch out the two telemetry boxes from banner background
+  useIsomorphicLayoutEffect(() => {
+    const updateCutouts = () => {
+      if (!sectionRef.current || !box1Ref.current || !box2Ref.current) return;
+      const sectionRect = sectionRef.current.getBoundingClientRect();
+      const rect1 = box1Ref.current.getBoundingClientRect();
+      const rect2 = box2Ref.current.getBoundingClientRect();
+      if (
+        sectionRect.width === 0 || sectionRect.height === 0 ||
+        rect1.width === 0 || rect1.height === 0 ||
+        rect2.width === 0 || rect2.height === 0
+      ) return;
+
+      const cw = Math.round(sectionRect.width);
+      const ch = Math.round(sectionRect.height);
+
+      const x1 = Math.round(rect1.left - sectionRect.left);
+      const y1 = Math.round(rect1.top - sectionRect.top);
+      const w1 = Math.round(rect1.width);
+      const h1 = Math.round(rect1.height);
+      const r1 = 12;
+
+      const x2 = Math.round(rect2.left - sectionRect.left);
+      const y2 = Math.round(rect2.top - sectionRect.top);
+      const w2 = Math.round(rect2.width);
+      const h2 = Math.round(rect2.height);
+      const r2 = 12;
+
+      const path1 = `M ${x1 + r1} ${y1} H ${x1 + w1 - r1} Q ${x1 + w1} ${y1} ${x1 + w1} ${y1 + r1} V ${y1 + h1 - r1} Q ${x1 + w1} ${y1 + h1} ${x1 + w1 - r1} ${y1 + h1} H ${x1 + r1} Q ${x1} ${y1 + h1} ${x1} ${y1 + h1 - r1} V ${y1 + r1} Q ${x1} ${y1} ${x1 + r1} ${y1} Z`;
+      const path2 = `M ${x2 + r2} ${y2} H ${x2 + w2 - r2} Q ${x2 + w2} ${y2} ${x2 + w2} ${y2 + r2} V ${y2 + h2 - r2} Q ${x2 + w2} ${y2 + h2} ${x2 + w2 - r2} ${y2 + h2} H ${x2 + r2} Q ${x2} ${y2 + h2} ${x2} ${y2 + h2 - r2} V ${y2 + r2} Q ${x2} ${y2} ${x2 + r2} ${y2} Z`;
+
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cw}" height="${ch}"><path fill-rule="evenodd" fill="#000" d="M 0 0 H ${cw} V ${ch} H 0 Z ${path1} ${path2}" /></svg>`;
+      const dataUri = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+
+      setMaskStyle({
+        WebkitMaskImage: dataUri,
+        maskImage: dataUri,
+        WebkitMaskSize: "100% 100%",
+        maskSize: "100% 100%",
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+      });
+    };
+
+    updateCutouts();
+
+    const resizeObserver = new ResizeObserver(updateCutouts);
+    if (sectionRef.current) resizeObserver.observe(sectionRef.current);
+    if (box1Ref.current) resizeObserver.observe(box1Ref.current);
+    if (box2Ref.current) resizeObserver.observe(box2Ref.current);
+
+    const t1 = setTimeout(updateCutouts, 60);
+    const t2 = setTimeout(updateCutouts, 250);
+    if (typeof document !== "undefined" && document.fonts) {
+      document.fonts.ready.then(updateCutouts).catch(() => {});
+    }
+
+    window.addEventListener("resize", updateCutouts);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateCutouts);
+    };
+  }, []);
 
   return (
     <section 
+      ref={sectionRef}
       id="imd-warning-banner"
-      className="w-full relative overflow-hidden rounded-xl border border-[rgba(0,242,254,0.22)] bg-gradient-to-r from-[#0F1B2F]/95 via-[#0E3D59]/80 to-[#0F1B2F]/95 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.6)]"
+      className="relative overflow-hidden rounded-2xl transition-all duration-300 bg-transparent"
       style={{
-        boxShadow: activeStage === 3 
-          ? "0 0 35px rgba(213,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)" 
-          : "0 0 25px rgba(0,242,254,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+        border: `1px solid ${viewedStage.borderHex}`,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.1)",
       }}
     >
-      {/* Decorative tactical radar sweep scan line */}
-      <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#00F2FE] to-transparent animate-pulse opacity-80" />
+      {/* Background layer with punched-out cutouts revealing the page background beneath */}
+      <div 
+        className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden transition-all duration-300"
+        style={{
+          backgroundColor: viewedStage.bgHex,
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          ...maskStyle,
+        }}
+      >
+        {/* Noise Film-Grain Texture Overlay */}
+        <div className="absolute inset-0 overflow-hidden opacity-75">
+          <Noise patternSize={250} patternScaleX={1} patternScaleY={1} patternRefreshInterval={2} patternAlpha={12} />
+        </div>
 
-      {/* Top Bar: IMD 4-Stage Tab Selector */}
-      <div className="p-3 sm:p-4 border-b border-[rgba(0,242,254,0.14)] bg-[#050B14]/60">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          
+        {/* Atmospheric Ambient Gradient */}
+        <div 
+          className="absolute top-0 right-0 w-1/2 h-full blur-3xl opacity-20 transition-colors duration-500"
+          style={{ backgroundColor: viewedStage.colorHex }}
+        />
+      </div>
+
+      <div className="relative z-10 p-4 sm:p-5 flex flex-col gap-4">
+        
+        {/* Top Horizon Line: Protocol Tabs + Live Cycle Status */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b pb-3"
+          style={{ borderColor: "rgba(255,255,255,0.12)" }}
+        >
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono tracking-widest text-slate-400 uppercase font-semibold flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-[#00F2FE]" />
-              Official IMD 4-Stage Protocol:
-            </span>
-            <span className="text-[11px] font-mono text-[#00F2FE] hidden sm:inline">
-              (Click tab to filter operations)
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#00F2FE] [text-shadow:0_2px_4px_rgba(0,0,0,0.95)] flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-[#00F2FE] drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]" />
+              IMD 4-Stage Warning Horizon:
             </span>
           </div>
 
-          {/* 4 Interactive Warning Stage Tabs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {[1, 2, 3, 4].map((stageNum) => {
-              const config = IMD_ALERT_STAGES[stageNum];
-              const isCurrentActive = activeStage === stageNum;
-              const isSelectedFilter = selectedStageFilter === stageNum;
+          {/* Interactive 4-Stage Segmented Tabs */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {[1, 2, 3, 4].map((sNum) => {
+              const cfg = IMD_ALERT_STAGES[sNum];
+              const isSelected = selectedStageFilter === sNum;
+              const isLive = activeStage === sNum;
 
               return (
-                <button
-                  key={stageNum}
-                  onClick={() => onSelectStageFilter(stageNum as AlertStageNumber)}
-                  className={`relative flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 border cursor-pointer ${
-                    isSelectedFilter
-                      ? "shadow-lg"
-                      : "hover:bg-slate-800/40 opacity-75 hover:opacity-100"
-                  }`}
-                  style={{
-                    backgroundColor: isSelectedFilter ? config.bgHex : "rgba(15, 27, 47, 0.4)",
-                    borderColor: isSelectedFilter ? config.borderHex : "rgba(30, 50, 82, 0.6)",
-                  }}
-                >
-                  {/* Status Indicator Bubble */}
-                  <div className="relative flex items-center justify-center shrink-0">
-                    <span 
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: config.colorHex }}
-                    />
-                    {isCurrentActive && (
-                      <span 
-                        className="absolute w-4 h-4 rounded-full animate-ping opacity-75"
-                        style={{ backgroundColor: config.colorHex }}
-                      />
-                    )}
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span 
-                        className="text-[11px] font-chakra font-bold tracking-wider uppercase truncate"
-                        style={{ color: isSelectedFilter ? config.textHex : "#CBD5E1" }}
-                      >
-                        Stage {config.stage}
-                      </span>
-                      {isCurrentActive && (
-                        <span className="text-[8px] font-mono font-extrabold uppercase px-1 py-0.2 rounded bg-red-500 text-white animate-pulse">
-                          LIVE
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-mono truncate">
-                      {config.name}
-                    </div>
-                  </div>
-                </button>
+                <StagePillButton
+                  key={sNum}
+                  cfg={cfg}
+                  isSelected={isSelected}
+                  isLive={isLive}
+                  onClick={() => onSelectStageFilter(sNum as AlertStageNumber)}
+                />
               );
             })}
           </div>
         </div>
-      </div>
 
-      {/* Main Horizon Banner: Operational Telemetry Bar */}
-      <div className="p-3 sm:p-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        {/* Core Directive & Live Countdown Grid */}
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5">
           
-          {/* Active Stage Callout & Primary Directive */}
-          <div className="flex items-start gap-3.5 max-w-2xl">
-            {/* Blinking Stage Icon Ring */}
-            <div 
-              className="relative flex items-center justify-center w-12 h-12 rounded-xl shrink-0 mt-0.5 border"
-              style={{
-                backgroundColor: currentStageConfig.bgHex,
-                borderColor: currentStageConfig.borderHex,
-                boxShadow: `0 0 20px ${currentStageConfig.bgHex}`,
-              }}
-            >
-              <AlertOctagon 
-                className={`w-7 h-7 ${currentStageConfig.pulse ? "animate-pulse" : ""}`}
-                style={{ color: currentStageConfig.colorHex }} 
-              />
-              {currentStageConfig.pulse && (
-                <span 
-                  className="absolute -inset-1 rounded-xl animate-ping opacity-30 border"
-                  style={{ borderColor: currentStageConfig.colorHex }}
-                />
-              )}
-            </div>
-
-            <div className="space-y-1">
+          {/* LEFT: Directive Details & Operational Mandate */}
+          <div className="flex items-start max-w-3xl">
+            <div className="space-y-1.5">
               <div className="flex items-center gap-2 flex-wrap">
-                <span 
-                  className="text-xs font-chakra font-extrabold tracking-widest px-2.5 py-0.5 rounded uppercase"
-                  style={{
-                    backgroundColor: currentStageConfig.bgHex,
-                    color: currentStageConfig.textHex,
-                    border: `1px solid ${currentStageConfig.borderHex}`,
-                  }}
+                <ShinyBadge
+                  className="pointer-events-auto shadow-[0_4px_14px_rgba(0,0,0,0.35),0_1px_3px_rgba(0,0,0,0.2),0_0_10px_rgba(0,0,0,0.25)]"
+                  roundedClassName="rounded-lg"
+                  speed={3}
+                  spread={80}
+                  borderColor={viewedStage.borderHex}
+                  borderShineColor="#ffffff"
+                  surfaceColor={viewedStage.bgHex}
+                  surfaceShineColor="rgba(255, 255, 255, 0.55)"
                 >
-                  {currentStageConfig.subName}
-                </span>
-
-                <span className="text-xs font-mono text-slate-300">
-                  IMD Mandate: <strong className="text-white">Zero Casualties</strong>
-                </span>
-
-                {selectedStageFilter !== activeStage && (
-                  <span className="text-[10px] font-mono text-yellow-300 bg-yellow-950/60 px-2 py-0.5 rounded border border-yellow-500/40">
-                    Viewing Stage {selectedStageFilter} Specs
+                  <ShieldAlert className="w-4 h-4 shrink-0" style={{ color: viewedStage.colorHex }} />
+                  <span className="font-semibold text-white text-xs tracking-wider uppercase font-rajdhani">
+                    {viewedStage.name} • {viewedStage.subName}
                   </span>
-                )}
+                </ShinyBadge>
               </div>
 
-              <h2 className="text-base sm:text-lg font-bold text-white font-rajdhani tracking-wide">
-                {currentStageConfig.description}
+              <h2 className="text-base sm:text-lg md:text-xl font-bold text-white font-rajdhani tracking-wide leading-snug [text-shadow:0_2px_8px_rgba(0,0,0,0.95),0_1px_3px_rgba(0,0,0,0.95)]">
+                {viewedStage.description}
               </h2>
-
-              <p className="text-xs text-slate-300 font-mono flex items-center gap-1.5 pt-0.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="text-[#00F2FE] font-semibold">Active Operational Mandate:</span> {currentStageConfig.actionSummary}
-              </p>
             </div>
           </div>
 
-          {/* Operational Telemetry Metrics Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
+          {/* RIGHT: Live Ticking Countdown & Surge Metrics (Cutout Apertures) */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 xl:justify-end shrink-0 pt-2 xl:pt-0 border-t xl:border-t-0 border-white/10">
             
-            {/* 1. Last Bulletin Issue */}
-            <div className="p-2.5 rounded-lg bg-[#050B14]/80 border border-[#1E3252] flex flex-col justify-between">
-              <div className="flex items-center gap-1 text-[10px] font-mono text-slate-400 uppercase">
-                <Calendar className="w-3 h-3 text-[#00F2FE]" />
-                <span>Last Issued</span>
+            {/* 1. Countdown Box (Cutout Aperture) */}
+            <div 
+              ref={box1Ref}
+              className="flex flex-col justify-between px-4 py-2.5 rounded-xl bg-transparent transition-all flex-shrink-0"
+              style={{
+                width: "215px",
+                height: "82px",
+                borderRadius: "0.75rem",
+                border: `1px solid ${viewedStage.borderHex}`,
+                boxShadow: `inset 0 2px 10px rgba(0,0,0,0.85), 0 0 12px ${viewedStage.colorHex}20`,
+              }}
+            >
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#00F2FE] flex items-center gap-1.5 [text-shadow:0_2px_4px_rgba(0,0,0,0.95),0_0_8px_rgba(0,242,254,0.35)]">
+                <Clock className="w-3.5 h-3.5 text-[#00F2FE] drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]" />
+                Next Advisory In
+              </span>
+              <div className="text-lg sm:text-xl font-orbitron font-extrabold text-[#00F2FE] tracking-wider [text-shadow:0_2px_6px_rgba(0,0,0,0.95),0_0_12px_rgba(0,242,254,0.4)] leading-tight">
+                <span>{pad(hours)}</span>
+                <span>:</span>
+                <span>{pad(minutes)}</span>
+                <span>:</span>
+                <span>{pad(seconds)}</span>
               </div>
-              <div className="text-sm sm:text-base font-bold text-white font-mono mt-1">
-                {lastIssuedIst}
-              </div>
-              <div className="text-[9px] font-mono text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Synchronized</span>
-              </div>
+              <span className="text-[9px] font-mono text-[#00F2FE] [text-shadow:0_2px_4px_rgba(0,0,0,0.95),0_0_8px_rgba(0,242,254,0.3)] leading-tight">
+                Synchronized • 06:00 IST Cycle
+              </span>
             </div>
 
-            {/* 2. Next Mandated Update Countdown (3h Cycle) */}
-            <div className="p-2.5 rounded-lg bg-[#050B14]/80 border border-[#1E3252] flex flex-col justify-between">
-              <div className="flex items-center gap-1 text-[10px] font-mono text-slate-400 uppercase">
-                <Clock className="w-3 h-3 text-[#FF9100]" />
-                <span>Next Update In</span>
-              </div>
-              <div className="text-sm sm:text-base font-bold text-[#FF9100] font-mono mt-1 tracking-tight">
-                {formatCountdown(secondsRemaining)}
-              </div>
-              <div className="text-[9px] font-mono text-slate-400">
-                Mandated 3h Cycle
-              </div>
-            </div>
-
-            {/* 3. Expected Landfall Window */}
-            <div className="p-2.5 rounded-lg bg-[#050B14]/80 border border-[#1E3252] flex flex-col justify-between">
-              <div className="flex items-center gap-1 text-[10px] font-mono text-slate-400 uppercase">
-                <Compass className="w-3 h-3 text-red-400" />
-                <span>Expected Landfall</span>
-              </div>
-              <div className="text-xs sm:text-sm font-bold text-white font-mono mt-1 leading-snug">
+            {/* 2. Landfall & Surge Pill (Cutout Aperture) */}
+            <div 
+              ref={box2Ref}
+              className="flex flex-col justify-between px-4 py-2.5 rounded-xl bg-transparent transition-all flex-shrink-0"
+              style={{
+                width: "215px",
+                height: "82px",
+                borderRadius: "0.75rem",
+                border: `1px solid ${viewedStage.borderHex}`,
+                boxShadow: `inset 0 2px 10px rgba(0,0,0,0.85), 0 0 12px ${viewedStage.colorHex}20`,
+              }}
+            >
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF5E36] flex items-center gap-1.5 [text-shadow:0_2px_4px_rgba(0,0,0,0.95),0_0_8px_rgba(255,94,54,0.35)]">
+                <Waves className="w-3.5 h-3.5 text-[#FF5E36] drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]" />
+                Projected Landfall
+              </span>
+              <div className="text-xs sm:text-sm font-bold text-[#FF5E36] font-mono truncate [text-shadow:0_2px_6px_rgba(0,0,0,0.95),0_0_12px_rgba(255,94,54,0.4)] leading-tight">
                 {landfallTime}
               </div>
-              <div className="text-[9px] font-mono text-red-400">
-                Puri Sector (&plusmn;3h)
-              </div>
-            </div>
-
-            {/* 4. Peak Storm Surge Height */}
-            <div className="p-2.5 rounded-lg bg-[#050B14]/80 border border-[#1E3252] flex flex-col justify-between">
-              <div className="flex items-center gap-1 text-[10px] font-mono text-slate-400 uppercase">
-                <Waves className="w-3 h-3 text-[#00F2FE]" />
-                <span>Peak Storm Surge</span>
-              </div>
-              <div className="text-sm sm:text-base font-bold text-[#00F2FE] font-mono mt-1">
-                +{surgeHeightM}m <span className="text-[10px] text-slate-300 font-normal">AAT</span>
-              </div>
-              <div className="text-[9px] font-mono text-slate-400">
-                Reach: 4.8 km inshore
+              <div className="text-xs font-mono font-bold text-[#FF5E36] [text-shadow:0_2px_4px_rgba(0,0,0,0.95),0_0_8px_rgba(255,94,54,0.3)] leading-tight">
+                Peak Surge: +{surgeHeightM}m AAT
               </div>
             </div>
 
           </div>
 
         </div>
+
       </div>
     </section>
   );

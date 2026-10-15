@@ -19,7 +19,8 @@ import { useCycloneStore } from "@/store/useCycloneStore";
 import { 
   AlertStageNumber, 
   DistrictVulnerability, 
-  MultiLingualBulletin 
+  MultiLingualBulletin,
+  BulletinLanguageCode
 } from "@/components/alerts/types";
 import { 
   COASTAL_DISTRICTS_DATA, 
@@ -71,6 +72,7 @@ function AlertsHubContent() {
 
   const [is2FaModalOpen, setIs2FaModalOpen] = useState(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [pdfBulletinLang, setPdfBulletinLang] = useState<BulletinLanguageCode>("en");
 
   // Handler for row/pin selection
   const handleSelectDistrict = (district: DistrictVulnerability) => {
@@ -131,7 +133,10 @@ function AlertsHubContent() {
           {/* SECTION D: AUTOMATED MULTI-LINGUAL BULLETIN GENERATOR (LEFT - BOTTOM) */}
           <div className="flex-1 min-h-[460px] lg:min-h-[500px]">
             <MultiLingualBulletinGenerator
-              onOpenPdfModal={() => setIsPdfModalOpen(true)}
+              onOpenPdfModal={(lang) => {
+                if (lang) setPdfBulletinLang(lang);
+                setIsPdfModalOpen(true);
+              }}
             />
           </div>
 
@@ -188,7 +193,7 @@ function AlertsHubContent() {
       <BulletinPdfModal
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}
-        bulletin={MULTI_LINGUAL_BULLETINS.en}
+        bulletin={MULTI_LINGUAL_BULLETINS[pdfBulletinLang] || MULTI_LINGUAL_BULLETINS.en}
       />
 
     </div>

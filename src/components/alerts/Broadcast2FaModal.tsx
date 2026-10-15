@@ -15,6 +15,8 @@ import {
   Users
 } from "lucide-react";
 
+import Noise from "@/components/ui/Noise";
+
 interface Broadcast2FaModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -80,10 +82,14 @@ export function Broadcast2FaModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#050B14]/85 backdrop-blur-md animate-in fade-in">
       <div 
-        className="w-full max-w-xl rounded-2xl bg-[#0F1B2F] border border-red-500/60 shadow-[0_20px_70px_rgba(213,0,0,0.5)] overflow-hidden text-xs text-slate-200 animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-xl rounded-2xl bg-[#0F1B2F] border border-red-500/60 shadow-[0_20px_70px_rgba(213,0,0,0.5)] overflow-hidden text-xs text-slate-200 animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
       >
+        {/* Noise overlay */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl z-0 opacity-75">
+          <Noise patternSize={250} patternScaleX={1} patternScaleY={1} patternRefreshInterval={3} patternAlpha={10} />
+        </div>
         {/* Top Header */}
         <div className="p-3.5 sm:p-4 bg-gradient-to-r from-red-950 via-[#0A1220] to-red-950 border-b border-red-500/40 flex items-center justify-between">
           <div className="flex items-center gap-2.5">

@@ -1,18 +1,20 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { 
   FileText, 
   X, 
   Download, 
-  Printer, 
   ShieldCheck, 
   Award,
   Calendar,
   Building,
   CheckCircle2
 } from "lucide-react";
+import { jsPDF } from "jspdf";
 import { MultiLingualBulletin } from "./types";
+import Noise from "@/components/ui/Noise";
+import { ScientistPillButton } from "@/components/ui/ScientistPillButton";
 
 interface BulletinPdfModalProps {
   isOpen: boolean;
@@ -25,97 +27,246 @@ export function BulletinPdfModal({
   onClose,
   bulletin,
 }: BulletinPdfModalProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen && contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const handleDownload = () => {
-    const textContent = `
-================================================================================
-GOVERNMENT OF INDIA • MINISTRY OF EARTH SCIENCES
-INDIA METEOROLOGICAL DEPARTMENT (IMD) / NATIONAL DISASTER MANAGEMENT AUTHORITY
-================================================================================
+    try {
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
 
-${bulletin.bulletinNumber}
-DATE / TIME: ${bulletin.issueDateTimeIst}
-ALERT STATUS: ${bulletin.warningStage}
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 15;
+      const contentWidth = pageWidth - margin * 2;
+      let y = 15;
 
-1. CYCLONE IDENTIFICATION & TRACK TELEMETRY
-   Name: ${bulletin.stormName}
-   Intensity: ${bulletin.intensityCategory}
-   Center Coordinates: ${bulletin.centerCoordinates}
-   Central Pressure: ${bulletin.centralPressureHpa} hPa
-   Sustained Gale Winds: ${bulletin.currentWindKmh} km/h (${bulletin.currentWindKnots} knots)
+      const checkPageBreak = (neededHeight: number) => {
+        if (y + neededHeight > 275) {
+          doc.addPage();
+          y = 15;
+        }
+      };
 
-2. LANDFALL WINDOW & STORM SURGE HYDRODYNAMICS
-   Estimated Window: ${bulletin.landfallForecast.expectedWindow}
-   Target Coast: ${bulletin.landfallForecast.coastalTarget}
-   Peak Surge Height: +${bulletin.landfallForecast.peakSurgeHeightM} meters above astronomical tide
-   Saline Reach: ${bulletin.landfallForecast.inundationReachKm} km inshore
+      // Header: Government of India
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(51, 65, 85);
+      doc.text("GOVERNMENT OF INDIA • MINISTRY OF EARTH SCIENCES", pageWidth / 2, y, { align: "center" });
+      y += 6;
 
-3. SECTORAL DAMAGE THREAT ASSESSMENT
-   * Structures: ${bulletin.damageExpectation.thatchedHouses}
-   * Power & Telecom: ${bulletin.damageExpectation.powerLines}
-   * Agricultural: ${bulletin.damageExpectation.standingCrops}
-   * Transport & Highways: ${bulletin.damageExpectation.transportRoads}
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text("INDIA METEOROLOGICAL DEPARTMENT", pageWidth / 2, y, { align: "center" });
+      y += 5;
 
-4. MANDATORY CIVIL & MARITIME ADVISORIES
-   * Fishermen: ${bulletin.civilAdvisory.fishermenWarning}
-   * Port Signals: ${bulletin.civilAdvisory.portSignals}
-   * Evacuation: ${bulletin.civilAdvisory.evacuationMandate}
-   * Helplines: ${bulletin.civilAdvisory.emergencyHelpline}
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(71, 85, 105);
+      doc.text("CYCLONE WARNING DIVISION, MAUSAM BHAWAN, LODHI ROAD, NEW DELHI - 110003", pageWidth / 2, y, { align: "center" });
+      y += 4;
+      doc.text("NATIONAL DISASTER EARLY WARNING DISPATCH • CWD / EOC / 2026 / 04", pageWidth / 2, y, { align: "center" });
+      y += 4;
 
-5. OFFICIAL DISPATCH NARRATIVE
-${bulletin.fullDispatchParagraphs.join("\n\n")}
+      // Divider
+      doc.setDrawColor(15, 23, 42);
+      doc.setLineWidth(0.6);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 6;
 
-================================================================================
-AUTHORIZED BY:
-DR. M. MOHAPATRA, DIRECTOR GENERAL OF METEOROLOGY (IMD)
-IN CONCURRENCE WITH NDMA EMERGENCY OPERATIONS CENTRE, NEW DELHI
-DISPATCH ID: NDMA-IMD-2026-OCT-04
-================================================================================
-`.trim();
+      // Bulletin Number & Issue Info
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text(bulletin.bulletinNumber, margin, y);
 
-    const blob = new Blob([textContent], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `IMD_Official_Bulletin_04.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text("Date & Time of Issue:", pageWidth - margin, y, { align: "right" });
+      y += 5;
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(185, 28, 28);
+      doc.text(bulletin.warningStage, margin, y);
+
+      doc.setTextColor(15, 23, 42);
+      doc.text(bulletin.issueDateTimeIst, pageWidth - margin, y, { align: "right" });
+      y += 7;
+
+      // Subject Box
+      doc.setFillColor(241, 245, 249);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, y, contentWidth, 14, 2, 2, "FD");
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`SUBJECT: ${bulletin.stormName}`, margin + 4, y + 5.5);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(51, 65, 85);
+      doc.text(`Classification: ${bulletin.intensityCategory}`, margin + 4, y + 10.5);
+      y += 18;
+
+      // Section 1: Track Telemetry
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(15, 23, 42);
+      doc.text("1. Location & Central Pressure:", margin, y);
+      doc.setFont("helvetica", "normal");
+      const locText = `The storm center is currently positioned at ${bulletin.centerCoordinates} with an estimated central pressure of ${bulletin.centralPressureHpa} hPa. Maximum sustained gale wind speed is ${bulletin.currentWindKmh} km/h (${bulletin.currentWindKnots} knots).`;
+      const locLines = doc.splitTextToSize(locText, contentWidth);
+      doc.text(locLines, margin, y + 4.5);
+      y += 5.5 + locLines.length * 4;
+
+      checkPageBreak(25);
+
+      // Section 2: Landfall Expectations
+      doc.setFont("helvetica", "bold");
+      doc.text("2. Landfall Expectations:", margin, y);
+      doc.setFont("helvetica", "normal");
+      const landfallText = `Projected to cross ${bulletin.landfallForecast.coastalTarget} during operational window of ${bulletin.landfallForecast.expectedWindow}. Peak storm surge of +${bulletin.landfallForecast.peakSurgeHeightM} meters above astronomical tide is expected to reach ${bulletin.landfallForecast.inundationReachKm} km inland.`;
+      const landfallLines = doc.splitTextToSize(landfallText, contentWidth);
+      doc.text(landfallLines, margin, y + 4.5);
+      y += 5.5 + landfallLines.length * 4;
+
+      checkPageBreak(35);
+
+      // Section 3: Damage Expected Box
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text("3. DAMAGE EXPECTED:", margin, y);
+      y += 4.5;
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      const damageTextArr = [
+        `• Thatched Houses: ${bulletin.damageExpectation.thatchedHouses}`,
+        `• Power Infrastructure: ${bulletin.damageExpectation.powerLines}`,
+        `• Agricultural Crops: ${bulletin.damageExpectation.standingCrops}`,
+        `• Arterials & Roads: ${bulletin.damageExpectation.transportRoads}`
+      ];
+      damageTextArr.forEach((dt) => {
+        const dtLines = doc.splitTextToSize(dt, contentWidth - 4);
+        checkPageBreak(dtLines.length * 3.5);
+        doc.text(dtLines, margin + 2, y);
+        y += dtLines.length * 3.8;
+      });
+      y += 3;
+
+      checkPageBreak(35);
+
+      // Section 4: Civil Advisory Box
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(185, 28, 28);
+      doc.text("4. ACTION SUGGESTED & CIVIL ADVISORY:", margin, y);
+      y += 4.5;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(15, 23, 42);
+      const advArr = [
+        `• Evacuation: ${bulletin.civilAdvisory.evacuationMandate}`,
+        `• Fishermen Warning: ${bulletin.civilAdvisory.fishermenWarning}`,
+        `• Port Signals: ${bulletin.civilAdvisory.portSignals}`,
+        `• Emergency Helplines: ${bulletin.civilAdvisory.emergencyHelpline}`
+      ];
+      advArr.forEach((adv) => {
+        const advLines = doc.splitTextToSize(adv, contentWidth - 4);
+        checkPageBreak(advLines.length * 3.5);
+        doc.text(advLines, margin + 2, y);
+        y += advLines.length * 3.8;
+      });
+      y += 3;
+
+      checkPageBreak(30);
+
+      // Section 5: Meteorological Narrative
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.text("5. OFFICIAL DISPATCH NARRATIVE:", margin, y);
+      y += 4.5;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      bulletin.fullDispatchParagraphs.forEach((para) => {
+        const pLines = doc.splitTextToSize(para, contentWidth);
+        checkPageBreak(pLines.length * 3.8 + 2);
+        doc.text(pLines, margin, y);
+        y += pLines.length * 3.8 + 2;
+      });
+      y += 5;
+
+      checkPageBreak(30);
+
+      // Signatory Box
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.4);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 5;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Copy to: Cabinet Secretary, New Delhi | Chief Secretary, Odisha & West Bengal", margin, y);
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(15, 23, 42);
+      doc.text("(Dr. Mrutyunjay Mohapatra)", pageWidth - margin, y, { align: "right" });
+      y += 4;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.text("Director General of Meteorology, IMD", pageWidth - margin, y, { align: "right" });
+
+      doc.save(`IMD_Official_Bulletin_04.pdf`);
+    } catch (err) {
+      console.error("Failed to generate PDF:", err);
+      window.print();
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#050B14]/85 backdrop-blur-md animate-in fade-in">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-3 sm:p-6 pt-20 sm:pt-24 pb-4 sm:pb-6 bg-[#050B14]/90 backdrop-blur-md animate-in fade-in overflow-hidden">
+      {/* Background Noise overlay for backdrop */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-40">
+        <Noise patternSize={250} patternScaleX={1} patternScaleY={1} patternRefreshInterval={3} patternAlpha={12} />
+      </div>
+
       <div 
-        className="w-full max-w-3xl rounded-2xl bg-[#0F1B2F] border border-[#00F2FE]/40 shadow-[0_20px_70px_rgba(0,242,254,0.3)] overflow-hidden text-xs text-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-3xl rounded-2xl bg-[#0F1B2F] border border-[#00F2FE]/40 shadow-[0_20px_70px_rgba(0,0,0,0.85)] overflow-hidden text-xs text-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[calc(100vh-6.5rem)] sm:max-h-[calc(100vh-7rem)] z-10"
         role="dialog"
         aria-modal="true"
       >
         {/* Top Header */}
-        <div className="p-3.5 sm:p-4 bg-[#0A1220] border-b border-[rgba(0,242,254,0.15)] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-[#00F2FE]" />
-            <h2 className="text-sm sm:text-base font-bold text-white font-orbitron">
-              Official Meteorological Bulletin Document
-            </h2>
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-500/40">
-              GOVT SEALED
-            </span>
+        <div className="relative z-10 p-3.5 sm:p-4 bg-[#0A1220]/90 backdrop-blur-md border-b border-[rgba(0,242,254,0.15)] flex items-center justify-between shrink-0 overflow-hidden">
+          {/* Header Noise Overlay */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-75">
+            <Noise patternSize={250} patternScaleX={1} patternScaleY={1} patternRefreshInterval={3} patternAlpha={15} />
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrint}
-              className="p-1.5 rounded-lg bg-[#050B14] hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-              title="Print Document"
-            >
-              <Printer className="w-4 h-4 text-[#00F2FE]" />
-            </button>
+          <div className="relative z-10 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-[#00F2FE]" />
+            <h2 className="text-sm sm:text-base font-bold text-[#00F2FE] font-orbitron tracking-wide [text-shadow:0_2px_4px_rgba(0,0,0,0.95)]">
+              Official Meteorological Bulletin Document
+            </h2>
+          </div>
+
+          <div className="relative z-10 flex items-center gap-2">
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
@@ -126,7 +277,10 @@ DISPATCH ID: NDMA-IMD-2026-OCT-04
         </div>
 
         {/* Paper Document Preview Surface (Simulating Official Letterhead) */}
-        <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-slate-100 text-slate-900 font-sans selection:bg-cyan-200 selection:text-slate-900">
+        <div 
+          ref={contentRef}
+          className="relative z-10 flex-1 p-4 sm:p-6 overflow-y-auto bg-slate-100 text-slate-900 font-sans selection:bg-cyan-200 selection:text-slate-900 scroll-smooth"
+        >
           
           {/* Government of India Emblem & Header */}
           <div className="text-center border-b-2 border-slate-800 pb-4 mb-4">
@@ -227,21 +381,36 @@ DISPATCH ID: NDMA-IMD-2026-OCT-04
         </div>
 
         {/* Modal Bottom Actions */}
-        <div className="p-3.5 sm:p-4 bg-[#0A1220] border-t border-[rgba(0,242,254,0.15)] flex items-center justify-between gap-3">
-          <button
-            onClick={onClose}
-            className="px-3.5 py-2 rounded-lg bg-[#050B14] hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-mono transition-colors cursor-pointer"
-          >
-            Close Preview
-          </button>
+        <div className="relative z-10 p-3.5 sm:p-4 bg-[#0A1220]/90 backdrop-blur-md border-t border-[rgba(0,242,254,0.15)] flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 overflow-hidden">
+          {/* Footer Noise Overlay */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-75">
+            <Noise patternSize={250} patternScaleX={1} patternScaleY={1} patternRefreshInterval={3} patternAlpha={15} />
+          </div>
 
-          <button
-            onClick={handleDownload}
-            className="flex items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-[#00F2FE] to-[#0E8BFD] hover:from-[#38F9D7] hover:to-[#00F2FE] text-[#050B14] font-mono text-xs font-extrabold tracking-wider transition-all shadow-[0_0_20px_rgba(0,242,254,0.4)] cursor-pointer"
-          >
-            <Download className="w-4 h-4 text-[#050B14]" />
-            <span>DOWNLOAD OFFICIAL IMD_BULLETIN_04.PDF</span>
-          </button>
+          <div className="relative z-10">
+            <ScientistPillButton
+              onClick={onClose}
+              icon={<X className="w-3.5 h-3.5 text-[#00F2FE] shrink-0" />}
+              hoverIcon={<X className="w-3.5 h-3.5 text-[#050B14] shrink-0" />}
+              label="CLOSE PREVIEW"
+              title="Close Bulletin Preview"
+            />
+          </div>
+
+          <div className="relative z-10">
+            <ScientistPillButton
+              onClick={handleDownload}
+              icon={<Download className="w-3.5 h-3.5 text-[#00F2FE] shrink-0" />}
+              hoverIcon={<Download className="w-3.5 h-3.5 text-[#050B14] shrink-0" />}
+              label={
+                <>
+                  <span className="hidden sm:inline">DOWNLOAD OFFICIAL IMD_BULLETIN_04.PDF</span>
+                  <span className="sm:hidden">DOWNLOAD OFFICIAL PDF</span>
+                </>
+              }
+              title="Download Official IMD Bulletin PDF"
+            />
+          </div>
         </div>
 
       </div>

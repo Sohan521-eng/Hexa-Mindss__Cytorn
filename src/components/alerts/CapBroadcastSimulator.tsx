@@ -1,29 +1,376 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { 
-  Radio, 
   Smartphone, 
   Code, 
-  ShieldCheck, 
   BellRing, 
-  Send, 
   Copy, 
   Check, 
-  AlertTriangle, 
   Volume2, 
-  VolumeX, 
   Lock, 
-  CheckCircle2,
-  ExternalLink,
-  Flame
+  Signal, 
+  TowerControl 
 } from "lucide-react";
-import { CapXmlPayload } from "./types";
+import Noise from "@/components/ui/Noise";
 import { CAP_XML_SAMPLE } from "./alertsData";
+import { gsap } from "gsap";
 
 interface CapBroadcastSimulatorProps {
   onOpen2FaModal: () => void;
   activeStormName?: string;
+}
+
+/* ─── Copy XML Pill Button (Slate Beveled Glass with GSAP roll interaction) ─── */
+function CopyXmlPillButton({
+  copied,
+  onClick,
+}: {
+  copied: boolean;
+  onClick: () => void;
+}) {
+  const pillRef = useRef<HTMLButtonElement | null>(null);
+  const circleRef = useRef<HTMLSpanElement | null>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const layout = () => {
+      if (!isMounted) return;
+      const circle = circleRef.current;
+      const pill = pillRef.current;
+      if (!circle || !pill) return;
+
+      const w = pill.offsetWidth || pill.getBoundingClientRect().width;
+      const h = pill.offsetHeight || pill.getBoundingClientRect().height;
+      if (w === 0 || h === 0) return;
+
+      const R = ((w * w) / 4 + h * h) / (2 * h);
+      const D = Math.ceil(2 * R) + 2;
+      const delta = Math.ceil(R - Math.sqrt(Math.max(0, R * R - (w * w) / 4))) + 1;
+      const originY = D - delta;
+
+      circle.style.width = `${D}px`;
+      circle.style.height = `${D}px`;
+      circle.style.bottom = `-${delta}px`;
+
+      gsap.set(circle, {
+        xPercent: -50,
+        scale: 0,
+        transformOrigin: `50% ${originY}px`,
+      });
+
+      const label = pill.querySelector<HTMLElement>(".pill-label");
+      const hover = pill.querySelector<HTMLElement>(".pill-label-hover");
+
+      if (label) gsap.set(label, { y: 0 });
+      if (hover) gsap.set(hover, { y: h + 12, opacity: 0 });
+
+      tlRef.current?.kill();
+      const tl = gsap.timeline({ paused: true });
+
+      tl.to(circle, { scale: 1.5, xPercent: -50, duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
+
+      if (label) {
+        tl.to(label, { y: -(h + 8), duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
+      }
+
+      if (hover) {
+        gsap.set(hover, { y: Math.ceil(h + 100), opacity: 0 });
+        tl.to(hover, { y: 0, opacity: 1, duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
+      }
+
+      tlRef.current = tl;
+    };
+
+    layout();
+    const timer = setTimeout(layout, 100);
+    window.addEventListener("resize", layout);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+      window.removeEventListener("resize", layout);
+      tlRef.current?.kill();
+    };
+  }, [copied]);
+
+  const handleEnter = () => {
+    tlRef.current?.tweenTo(tlRef.current.duration(), {
+      duration: 0.3,
+      ease: "power2.easeOut",
+      overwrite: "auto",
+    });
+  };
+
+  const handleLeave = () => {
+    tlRef.current?.tweenTo(0, {
+      duration: 0.25,
+      ease: "power2.easeOut",
+      overwrite: "auto",
+    });
+  };
+
+  return (
+    <button
+      type="button"
+      ref={pillRef}
+      onClick={onClick}
+      className="scientist-pill-slate relative z-10 shrink-0 cursor-pointer"
+      style={{ height: "30px", minWidth: "auto", padding: "0 12px", fontSize: "11px" }}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      title={copied ? "Copied to clipboard" : "Copy XML payload"}
+    >
+      <span className="hover-circle" aria-hidden="true" ref={circleRef} />
+      <span className="label-stack">
+        <span className="pill-label">
+          {copied ? (
+            <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          ) : (
+            <Copy className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+          )}
+          <span>{copied ? "COPIED" : "COPY XML"}</span>
+        </span>
+        <span className="pill-label-hover" aria-hidden="true">
+          {copied ? (
+            <Check className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+          ) : (
+            <Copy className="w-3.5 h-3.5 text-white shrink-0" />
+          )}
+          <span>{copied ? "COPIED" : "COPY XML"}</span>
+        </span>
+      </span>
+    </button>
+  );
+}
+
+/* ─── Test Siren Pill Button (Amber / Warning Audio Chime) ─── */
+function TestSirenPillButton({
+  onClick,
+  isSimulating,
+}: {
+  onClick: () => void;
+  isSimulating: boolean;
+}) {
+  const pillRef = useRef<HTMLButtonElement | null>(null);
+  const circleRef = useRef<HTMLSpanElement | null>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const layout = () => {
+      if (!isMounted) return;
+      const circle = circleRef.current;
+      const pill = pillRef.current;
+      if (!circle || !pill) return;
+
+      const w = pill.offsetWidth || pill.getBoundingClientRect().width;
+      const h = pill.offsetHeight || pill.getBoundingClientRect().height;
+      if (w === 0 || h === 0) return;
+
+      const R = ((w * w) / 4 + h * h) / (2 * h);
+      const D = Math.ceil(2 * R) + 2;
+      const delta = Math.ceil(R - Math.sqrt(Math.max(0, R * R - (w * w) / 4))) + 1;
+      const originY = D - delta;
+
+      circle.style.width = `${D}px`;
+      circle.style.height = `${D}px`;
+      circle.style.bottom = `-${delta}px`;
+
+      gsap.set(circle, {
+        xPercent: -50,
+        scale: 0,
+        transformOrigin: `50% ${originY}px`,
+      });
+
+      const label = pill.querySelector<HTMLElement>(".pill-label");
+      const hover = pill.querySelector<HTMLElement>(".pill-label-hover");
+
+      if (label) gsap.set(label, { y: 0 });
+      if (hover) gsap.set(hover, { y: h + 12, opacity: 0 });
+
+      tlRef.current?.kill();
+      const tl = gsap.timeline({ paused: true });
+
+      tl.to(circle, { scale: 1.5, xPercent: -50, duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
+
+      if (label) {
+        tl.to(label, { y: -(h + 8), duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
+      }
+
+      if (hover) {
+        gsap.set(hover, { y: Math.ceil(h + 100), opacity: 0 });
+        tl.to(hover, { y: 0, opacity: 1, duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
+      }
+
+      tlRef.current = tl;
+    };
+
+    layout();
+    const timer = setTimeout(layout, 100);
+    window.addEventListener("resize", layout);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+      window.removeEventListener("resize", layout);
+      tlRef.current?.kill();
+    };
+  }, []);
+
+  const handleEnter = () => {
+    tlRef.current?.tweenTo(tlRef.current.duration(), {
+      duration: 0.3,
+      ease: "power2.easeOut",
+      overwrite: "auto",
+    });
+  };
+
+  const handleLeave = () => {
+    tlRef.current?.tweenTo(0, {
+      duration: 0.25,
+      ease: "power2.easeOut",
+      overwrite: "auto",
+    });
+  };
+
+  return (
+    <button
+      type="button"
+      ref={pillRef}
+      onClick={onClick}
+      className="scientist-pill-amber w-full sm:w-auto relative z-10 shrink-0 cursor-pointer"
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      title="Play synthetic 853/960 Hz EAS alert chime"
+    >
+      <span className="hover-circle" aria-hidden="true" ref={circleRef} />
+      <span className="label-stack">
+        <span className="pill-label">
+          <Volume2 className="w-4 h-4 text-[#FF9100] shrink-0" />
+          <span>TEST EAS ALERT SIREN</span>
+        </span>
+        <span className="pill-label-hover" aria-hidden="true">
+          <Volume2 className="w-4 h-4 text-[#050B14] shrink-0" />
+          <span>TEST EAS ALERT SIREN</span>
+        </span>
+      </span>
+    </button>
+  );
+}
+
+/* ─── Send Cell Broadcast Pill Button (Crimson Red / 2FA Gate) ─── */
+function SendBroadcastPillButton({
+  onClick,
+}: {
+  onClick: () => void;
+}) {
+  const pillRef = useRef<HTMLButtonElement | null>(null);
+  const circleRef = useRef<HTMLSpanElement | null>(null);
+  const tlRef = useRef<gsap.core.Timeline | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const layout = () => {
+      if (!isMounted) return;
+      const circle = circleRef.current;
+      const pill = pillRef.current;
+      if (!circle || !pill) return;
+
+      const w = pill.offsetWidth || pill.getBoundingClientRect().width;
+      const h = pill.offsetHeight || pill.getBoundingClientRect().height;
+      if (w === 0 || h === 0) return;
+
+      const R = ((w * w) / 4 + h * h) / (2 * h);
+      const D = Math.ceil(2 * R) + 2;
+      const delta = Math.ceil(R - Math.sqrt(Math.max(0, R * R - (w * w) / 4))) + 1;
+      const originY = D - delta;
+
+      circle.style.width = `${D}px`;
+      circle.style.height = `${D}px`;
+      circle.style.bottom = `-${delta}px`;
+
+      gsap.set(circle, {
+        xPercent: -50,
+        scale: 0,
+        transformOrigin: `50% ${originY}px`,
+      });
+
+      const label = pill.querySelector<HTMLElement>(".pill-label");
+      const hover = pill.querySelector<HTMLElement>(".pill-label-hover");
+
+      if (label) gsap.set(label, { y: 0 });
+      if (hover) gsap.set(hover, { y: h + 12, opacity: 0 });
+
+      tlRef.current?.kill();
+      const tl = gsap.timeline({ paused: true });
+
+      tl.to(circle, { scale: 1.5, xPercent: -50, duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
+
+      if (label) {
+        tl.to(label, { y: -(h + 8), duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
+      }
+
+      if (hover) {
+        gsap.set(hover, { y: Math.ceil(h + 100), opacity: 0 });
+        tl.to(hover, { y: 0, opacity: 1, duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
+      }
+
+      tlRef.current = tl;
+    };
+
+    layout();
+    const timer = setTimeout(layout, 100);
+    window.addEventListener("resize", layout);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+      window.removeEventListener("resize", layout);
+      tlRef.current?.kill();
+    };
+  }, []);
+
+  const handleEnter = () => {
+    tlRef.current?.tweenTo(tlRef.current.duration(), {
+      duration: 0.3,
+      ease: "power2.easeOut",
+      overwrite: "auto",
+    });
+  };
+
+  const handleLeave = () => {
+    tlRef.current?.tweenTo(0, {
+      duration: 0.25,
+      ease: "power2.easeOut",
+      overwrite: "auto",
+    });
+  };
+
+  return (
+    <button
+      type="button"
+      ref={pillRef}
+      onClick={onClick}
+      className="scientist-pill-red w-full sm:w-auto relative z-10 shrink-0 cursor-pointer shadow-[0_0_24px_rgba(239,68,68,0.35)]"
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      title="Open secure 2FA confirmation gate to dispatch real-time emergency cell broadcast"
+    >
+      <span className="hover-circle" aria-hidden="true" ref={circleRef} />
+      <span className="label-stack">
+        <span className="pill-label">
+          <span className="!text-white font-extrabold tracking-wider">SEND CELL BROADCAST (2FA)</span>
+          <Lock className="w-3.5 h-3.5 text-white/80 shrink-0" />
+        </span>
+        <span className="pill-label-hover" aria-hidden="true">
+          <span className="text-[#050B14] font-extrabold tracking-wider">SEND CELL BROADCAST (2FA)</span>
+          <Lock className="w-3.5 h-3.5 text-[#050B14] shrink-0" />
+        </span>
+      </span>
+    </button>
+  );
 }
 
 export function CapBroadcastSimulator({
@@ -83,7 +430,7 @@ export function CapBroadcastSimulator({
       const gain = ctx.createGain();
 
       osc.type = "sawtooth";
-      // Alternate frequencies 853Hz & 960Hz (Standard Emergency Alert System EAS frequencies)
+      // Alternate frequencies 853Hz & 960Hz (Standard EAS frequencies)
       const now = ctx.currentTime;
       osc.frequency.setValueAtTime(853, now);
       osc.frequency.setValueAtTime(960, now + 0.25);
@@ -111,54 +458,63 @@ export function CapBroadcastSimulator({
   return (
     <div 
       id="cap-broadcast-simulator"
-      className="flex flex-col h-full rounded-xl border border-[rgba(0,242,254,0.2)] bg-[#0F1B2F]/90 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden"
+      className="relative flex flex-col h-full rounded-xl backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.7)] overflow-hidden"
+      style={{
+        background: "#0F1B2F",
+        border: "1.5px solid rgba(0, 242, 254, 0.55)",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,242,254,0.12), 0 0 18px rgba(0,242,254,0.15)",
+      }}
     >
-      {/* Header Bar */}
-      <div className="p-3 sm:p-4 bg-[#0A1220]/95 border-b border-[rgba(0,242,254,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-        <div>
-          <div className="flex items-center gap-2">
-            <Radio className="w-4 h-4 text-red-500 animate-pulse" />
-            <h3 className="text-sm sm:text-base font-bold text-white font-orbitron tracking-wide">
-              Emergency Broadcast Simulator (CAP)
-            </h3>
-            <span className="text-[10px] font-mono text-red-400 bg-red-950/60 px-1.5 py-0.5 rounded border border-red-500/40 font-semibold">
-              ROLE GUARDED
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-            ITU-T X.1303 CAP-XML Payload • Geo-Fenced National Cell Broadcast Mesh
-          </p>
-        </div>
+      {/* Noise Film Grain Texture — softened and refined */}
+      <Noise patternSize={250} patternScaleX={1} patternScaleY={1} patternRefreshInterval={2} patternAlpha={8} />
 
-        {/* Auth Role Guard Status */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#050B14] border border-emerald-500/30 text-emerald-400 text-xs font-mono">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Officer #4812 (SDMA Verified)</span>
-        </div>
+      {/* Header Bar */}
+      <div className="relative z-10 p-4 pb-2 shrink-0">
+        <h3 className="text-base sm:text-lg font-extrabold tracking-wide flex items-center gap-2">
+          <span className="heading-gradient-shadow-wrapper">
+            <span className="heading-moving-gradient font-black font-rajdhani uppercase tracking-wider">
+              Emergency Cell Broadcast Gateway (CAP v1.2)
+            </span>
+          </span>
+        </h3>
+        <p className="text-xs text-[#00F2FE] font-medium font-sans mt-0.5 [text-shadow:0_2px_4px_rgba(0,0,0,0.95)]">
+          ITU-T X.1303 Common Alerting Protocol • Geo-fenced telecom cell broadcast service (CBS)
+        </p>
       </div>
 
       {/* Switcher Tabs: SMS / Mobile Preview vs CAP-XML */}
-      <div className="px-3 py-2 bg-[#08101E] border-b border-[rgba(0,242,254,0.1)] flex items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-1.5">
+      <div className="relative z-10 px-4 pb-2.5 flex items-center justify-between gap-2 shrink-0">
+        <div 
+          className="relative z-10 isolate flex items-center gap-1 p-1 rounded-lg border border-[rgba(0,242,254,0.4)] shadow-[0_4px_16px_rgba(0,0,0,0.8)] shrink-0"
+          style={{ backgroundColor: "#0A1424" }}
+        >
           <button
+            type="button"
             onClick={() => setActiveTab("sms")}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-mono font-semibold transition-all cursor-pointer ${
+            className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
               activeTab === "sms"
-                ? "bg-[#00F2FE]/20 text-[#00F2FE] border border-[#00F2FE]/40"
-                : "text-slate-400 hover:text-white"
+                ? "border border-[#00F2FE]/70 text-[#00F2FE] shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
+                : "border border-[#1E3252] hover:border-[#00F2FE]/60 text-[#8E9EB5] hover:text-[#00F2FE]"
             }`}
+            style={{
+              backgroundColor: activeTab === "sms" ? "#0E2438" : "#050B14",
+            }}
           >
             <Smartphone className="w-3.5 h-3.5" />
-            <span>Cell Broadcast SMS Preview</span>
+            <span>Cell Broadcast Dispatch Preview</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab("xml")}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-mono font-semibold transition-all cursor-pointer ${
+            className={`h-7 px-2.5 rounded-md text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
               activeTab === "xml"
-                ? "bg-[#00F2FE]/20 text-[#00F2FE] border border-[#00F2FE]/40"
-                : "text-slate-400 hover:text-white"
+                ? "border border-[#00F2FE]/70 text-[#00F2FE] shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
+                : "border border-[#1E3252] hover:border-[#00F2FE]/60 text-[#8E9EB5] hover:text-[#00F2FE]"
             }`}
+            style={{
+              backgroundColor: activeTab === "xml" ? "#0E2438" : "#050B14",
+            }}
           >
             <Code className="w-3.5 h-3.5" />
             <span>ITU-T X.1303 XML Payload</span>
@@ -166,37 +522,32 @@ export function CapBroadcastSimulator({
         </div>
 
         {activeTab === "xml" && (
-          <button
-            onClick={handleCopyXml}
-            className="flex items-center gap-1 text-[11px] font-mono text-slate-300 hover:text-white px-2 py-0.5 rounded bg-[#050B14] border border-[#1E3252] cursor-pointer"
-          >
-            {xmlCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-            <span>{xmlCopied ? "Copied" : "Copy XML"}</span>
-          </button>
+          <CopyXmlPillButton copied={xmlCopied} onClick={handleCopyXml} />
         )}
       </div>
 
       {/* Main Tab Content */}
-      <div className="flex-1 p-4 overflow-y-auto max-h-[380px] lg:max-h-[460px] bg-[#070D18]">
+      <div className="relative z-10 flex-1 min-h-0 px-4 py-2 overflow-y-auto flex flex-col">
         {activeTab === "sms" ? (
-          /* Mobile Phone Broadcast Mockup */
-          <div className="flex flex-col items-center justify-center py-2 space-y-4">
+          /* High-Impact Cell Broadcast Operations Console */
+          <div className="flex flex-col items-center justify-center my-auto py-2 space-y-4 w-full">
             
-            {/* Citizen Mobile Device Frame */}
-            <div className="w-full max-w-[340px] rounded-2xl bg-[#0F172A] border-2 border-slate-700/80 p-3.5 shadow-[0_15px_45px_rgba(0,0,0,0.8)] relative">
-              {/* Speaker Notch */}
-              <div className="w-16 h-1 rounded-full bg-slate-700 mx-auto mb-3" />
-
-              {/* Status Header */}
-              <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 border-b border-slate-800 pb-2 mb-3">
-                <span>BSNL / Airtel / Jio (Emergency Mesh)</span>
-                <span>LTE • 100%</span>
+            {/* National Emergency Alert Box */}
+            <div className="w-full max-w-[440px] rounded-2xl bg-[#0A1220]/95 border-2 border-red-500/80 p-4 shadow-[0_15px_45px_rgba(213,0,0,0.25)] space-y-3">
+              
+              {/* Carrier Mesh Status Bar */}
+              <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 border-b border-slate-800 pb-2">
+                <span className="flex items-center gap-1.5 text-cyan-400">
+                  <Signal className="w-3 h-3" />
+                  BSNL • Airtel • Jio • Vi (National Mesh)
+                </span>
+                <span className="text-emerald-400 font-bold">100% Cell Coverage</span>
               </div>
 
-              {/* Emergency Alert Message Card */}
-              <div className="rounded-xl bg-red-950/80 border-2 border-red-500/80 p-3.5 space-y-2.5 text-left shadow-[0_0_20px_rgba(213,0,0,0.3)]">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-red-600 flex items-center justify-center shrink-0 animate-pulse">
+              {/* Alert Content Card */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center shrink-0 animate-pulse shadow-md">
                     <BellRing className="w-4 h-4 text-white" />
                   </div>
                   <div>
@@ -209,37 +560,45 @@ export function CapBroadcastSimulator({
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded bg-[#050B14]/80 border border-red-900/60 font-mono text-[11px] text-slate-100 leading-relaxed">
-                  <strong className="text-red-400 block mb-1">
-                    [URGENT EVACUATION MANDATE: {activeStormName.toUpperCase()}]
-                  </strong>
-                  Super Cyclone approaching Puri & Paradip Coast. Severe gale winds 210 km/h and +3.4m sea surge expected within 24 hours.
-                  <span className="block mt-1 text-yellow-300 font-semibold">
+                <div className="p-3 rounded-xl bg-[#050B14] border border-red-900/60 font-mono text-xs text-slate-100 leading-relaxed space-y-1.5">
+                  <div className="text-red-400 font-bold">
+                    [MANDATORY EVACUATION: {activeStormName.toUpperCase()}]
+                  </div>
+                  <div>
+                    Extremely Severe Cyclonic Storm approaching Puri & Paradip coast. Winds 210 km/h and +3.4m storm surge within 24 hours.
+                  </div>
+                  <div className="text-amber-300 font-bold pt-1">
                     Evacuate to nearest Multipurpose Cyclone Shelter immediately.
-                  </span>
-                  <span className="block mt-1 text-slate-400 text-[10px]">
-                    Emergency helpline: Dial 1078 or 112. Do not venture outdoors.
-                  </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 pt-1">
+                    Emergency Toll-Free: 1078 or 112. Stay indoors away from windows.
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 pt-1">
-                  <span>Target: Puri, Jagatsinghpur, Kendrapara</span>
-                  <span>Alert ID: CWD-2026-04</span>
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-1">
+                  <span>Target: Coastal Belt (0-5 km)</span>
+                  <span className="text-slate-500">ID: CWD-2026-04</span>
                 </div>
               </div>
 
-              {/* Mobile Phone Dismiss Note */}
-              <div className="mt-3 text-center text-[10px] font-mono text-slate-500">
-                Pushed to 1,480,000 devices via Cell Broadcast Service (CBS)
+              {/* Geo-fenced population reach */}
+              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono text-slate-400">
+                <span className="flex items-center gap-1 text-[#00F2FE]">
+                  <TowerControl className="w-3.5 h-3.5" />
+                  CBS Geo-Fence Ready
+                </span>
+                <span className="text-white font-bold">
+                  1,480,000 Devices in Zone
+                </span>
               </div>
             </div>
 
-            {/* Test Simulation Feedback Toast */}
+            {/* Test Audio Chime Toast */}
             {simulationAlertVisible && (
-              <div className="w-full max-w-[340px] p-2.5 rounded-lg bg-red-900/40 border border-red-500/50 flex items-center justify-between gap-2 text-xs font-mono text-red-200 animate-in fade-in slide-in-from-top-2">
+              <div className="w-full max-w-[440px] p-2.5 rounded-xl bg-red-950/60 border border-red-500/50 flex items-center justify-between gap-2 text-xs font-mono text-red-200 animate-in fade-in slide-in-from-top-2">
                 <div className="flex items-center gap-2">
-                  <Volume2 className="w-4 h-4 text-red-400 animate-bounce" />
-                  <span>853/960 Hz Alert Chime Triggered</span>
+                  <Volume2 className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>853/960 Hz Emergency EAS Siren Sounding</span>
                 </div>
                 <button
                   onClick={() => setSimulationAlertVisible(false)}
@@ -253,45 +612,26 @@ export function CapBroadcastSimulator({
           </div>
         ) : (
           /* ITU-T X.1303 CAP-XML Payload Preview */
-          <div className="relative">
-            <pre className="p-3.5 rounded-lg bg-[#050B14] border border-[#1E3252] text-[11px] font-mono text-slate-300 overflow-x-auto leading-relaxed scrollbar-none">
+          <div className="relative my-auto">
+            <pre className="p-3.5 rounded-xl bg-[#050B14] border-2 border-[#00F2FE]/70 text-[11px] font-mono text-slate-300 overflow-x-auto leading-relaxed scrollbar-none shadow-none">
               <code>{capXmlString}</code>
             </pre>
-            <div className="mt-2 flex items-center justify-between text-[10px] font-mono text-slate-400">
-              <span className="flex items-center gap-1 text-emerald-400">
-                <CheckCircle2 className="w-3 h-3" />
-                <span>OASIS CAP v1.2 / ITU-T X.1303 Validated</span>
-              </span>
-              <span>Payload Size: 1.4 KB</span>
-            </div>
           </div>
         )}
       </div>
 
       {/* Dual Dispatch Action Controls */}
-      <div className="p-3 bg-[#0A1220] border-t border-[rgba(0,242,254,0.15)] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-        
-        {/* Simulate CAP Alert Button */}
-        <button
+      <div className="relative z-10 p-4 pt-2 pb-4 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+        {/* Simulate CAP Alert Siren Button */}
+        <TestSirenPillButton
           onClick={handleSimulateAlertAudio}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-[#050B14] hover:bg-amber-950/40 border border-[#FF9100]/60 hover:border-[#FF9100] text-[#FF9100] text-xs font-mono font-bold transition-all shadow-[0_0_12px_rgba(255,145,0,0.2)] cursor-pointer"
-          title="Play synthetic 853/960 Hz alert chime and display cell notification simulation"
-        >
-          <Volume2 className={`w-4 h-4 ${isSimulatingSiren ? "animate-spin" : ""}`} />
-          <span>Simulate CAP Alert</span>
-        </button>
+          isSimulating={isSimulatingSiren}
+        />
 
-        {/* Flashing Red Send Cell Broadcast Button (2FA Gate) */}
-        <button
+        {/* Flashing Send Cell Broadcast Button (2FA Gate) */}
+        <SendBroadcastPillButton
           onClick={onOpen2FaModal}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#D50000] via-[#EF4444] to-[#D50000] hover:from-red-600 hover:to-red-700 text-white text-xs font-mono font-extrabold tracking-wider transition-all shadow-[0_0_20px_rgba(213,0,0,0.5)] border border-red-400 cursor-pointer animate-pulse"
-          title="Open secure 2FA confirmation gate to dispatch real-time emergency cell broadcast"
-        >
-          <Flame className="w-4 h-4 text-yellow-300 animate-bounce" />
-          <span>SEND CELL BROADCAST (2FA)</span>
-          <Lock className="w-3.5 h-3.5 text-white/80" />
-        </button>
-
+        />
       </div>
     </div>
   );

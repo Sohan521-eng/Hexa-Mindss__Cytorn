@@ -454,5 +454,22 @@
   will-change: transform, filter, opacity;
 }
 
+/* 🚨 Emergency Hotline Pulsing Zoom Animation */
+@keyframes pulse-zoom {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.92;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
 
-
+.animate-pulse-zoom {
+  display: inline-flex;
+  align-items: center;
+  animation: pulse-zoom 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}

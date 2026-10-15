@@ -140,10 +140,11 @@ export const ShinyBadge: React.FC<ShinyBadgeProps> = ({
       {/* 2. Inner Body with crisp border reinforcement */}
       <div
         className={cn(
-          "relative w-full h-full px-3.5 py-1.5 bg-[#0F1B2F]/95 backdrop-blur-md border border-[rgba(0,242,254,0.4)] flex items-center gap-2 overflow-hidden",
+          "relative w-full h-full px-3.5 py-1.5 bg-[#0F1B2F]/95 backdrop-blur-md border flex items-center gap-2 overflow-hidden",
           roundedClassName,
           innerClassName
         )}
+        style={{ borderColor: borderColor || "rgba(0, 242, 254, 0.4)" }}
       >
         {/* 3. Sweeping Surface Specular Glare across entire container */}
         <motion.div
