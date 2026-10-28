@@ -154,6 +154,7 @@ export function SlideOverMenu({ isOpen, onClose }: SlideOverMenuProps) {
     { num: "04", name: "Disaster Warning Hub", href: "/alerts", desc: "IMD 4-stage color alerts & coastal evacuation grids" },
     { num: "05", name: "Model Performance Lab", href: "/model-metrics", desc: "Validation metrics, confusion matrix & RMSE benchmarks" },
     { num: "06", name: "Developer & API Hub", href: "/settings", desc: "Doppler radar webhooks & REST API docs" },
+    { num: "07", name: "Coastal Digital Twin", href: "/digital-twin", desc: "Hyper-local coastal inundation & sub-street flood simulation" },
   ];
 
   return (
