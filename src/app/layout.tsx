@@ -15,7 +15,7 @@ import {
 import localFont from "next/font/local";
 import "./globals.css";
 import { GlobalNav } from "@/components/layout/GlobalNav";
-import { Scanner } from "@/components/ui/Scanner";
+import { AtmosphericBackground } from "@/components/layout/AtmosphericBackground";
 
 const magilio = localFont({
   src: [
@@ -167,38 +167,8 @@ export default function RootLayout({
       <body
         className={`${fontVariables} font-jakarta bg-[#050B14] text-white antialiased min-h-screen flex flex-col selection:bg-[#00F2FE]/30 selection:text-[#00F2FE] relative`}
       >
-        {/* React Bits Scanner Full-Screen Atmospheric Background */}
-        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-          <Scanner
-            color1="#0094ff"
-            color2="#00eaff"
-            color3="#ff6d07"
-            speed={0.5}
-            sweepSpeed={0.5}
-            sweepWidth={2}
-            sweepFalloff={6}
-            scale={1.5}
-            frequency={2}
-            ripple={0.25}
-            bandDensity={11}
-            lineSharpness={4}
-            glow={0}
-            scanDirection="vertical"
-            colorSpread={1}
-            brightness={1.0}
-            contrast={1.5}
-            softness={3}
-            vignette={0.7}
-            scanline={true}
-            grain={false}
-            grainIntensity={0}
-            opacity={0.9}
-            mouseInteraction={true}
-            mouseRadius={0.3}
-            mouseStrength={1.25}
-            className="w-full h-full"
-          />
-        </div>
+        {/* React Bits Scanner Full-Screen Atmospheric Background (Auto-hidden on /digital-twin) */}
+        <AtmosphericBackground />
 
         <GlobalNav />
         <div className="relative z-10 flex-1 flex flex-col">

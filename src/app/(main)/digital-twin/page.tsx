@@ -133,7 +133,7 @@ function DigitalTwinContent() {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-[#050B14] text-white overflow-hidden relative">
+    <div className="flex-1 flex flex-col h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] bg-[#050B14] text-white overflow-hidden relative">
       
       {/* 1. TOP OPERATIONAL COMMAND BAR (#twin-command-bar) */}
       <TwinCommandBar

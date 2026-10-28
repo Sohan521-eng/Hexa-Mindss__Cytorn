@@ -72,7 +72,7 @@ function buildBaseMapStyle(isSatellite: boolean): any {
           type: "raster",
           source: "satellite-tiles",
           paint: {
-            "raster-opacity": 0.85,
+            "raster-opacity": 1.0,
             "raster-contrast": 0.15,
           }
         }
@@ -101,7 +101,7 @@ function buildBaseMapStyle(isSatellite: boolean): any {
         type: "raster",
         source: "carto-dark",
         paint: {
-          "raster-opacity": 0.9,
+          "raster-opacity": 1.0,
           "raster-contrast": 0.25,
         }
       }
