@@ -346,7 +346,7 @@ export function DigitalTwinMap({
     <div
       ref={containerRef}
       id="inundation-map-canvas"
-      className="relative flex-1 w-full h-full min-h-[480px] bg-[#050B14] overflow-hidden select-none"
+      className="relative flex-1 w-full h-full min-h-[480px] rounded-2xl overflow-hidden select-none border border-[#00F2FE]/25 bg-[#050B14]/60 backdrop-blur-md shadow-2xl"
     >
       {/* 1. Underlying MapLibre GL WebGL Canvas Container */}
       <div

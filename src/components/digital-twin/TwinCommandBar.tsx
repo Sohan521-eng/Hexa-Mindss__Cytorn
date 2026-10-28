@@ -41,7 +41,7 @@ export function TwinCommandBar({
   return (
     <header 
       id="twin-command-bar"
-      className="w-full bg-[#0F1B2F]/90 backdrop-blur-xl border-b border-[#00F2FE]/20 px-3 sm:px-6 py-2.5 transition-all z-30 shadow-[0_4px_25px_rgba(0,0,0,0.5)]"
+      className="w-full rounded-2xl bg-[#0F1B2F]/80 backdrop-blur-xl border border-[#00F2FE]/25 px-3 sm:px-6 py-3 transition-all z-30 shadow-2xl"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         

@@ -92,7 +92,7 @@ export function SurgeLevelSlider({
   return (
     <aside
       id="twin-controls-rail"
-      className="w-full lg:w-72 xl:w-80 shrink-0 bg-[#0F1B2F]/90 backdrop-blur-xl border-r border-[#00F2FE]/20 flex flex-col p-4 gap-4 overflow-y-auto text-white"
+      className="w-full lg:w-72 xl:w-80 shrink-0 rounded-2xl bg-[#0F1B2F]/80 backdrop-blur-xl border border-[#00F2FE]/25 flex flex-col p-4 gap-4 overflow-y-auto text-white shadow-2xl"
     >
       {/* 1. Countdown to Surge Landfall */}
       <div className="rounded-xl p-3 bg-gradient-to-br from-[#050B14] to-[#0E3D59]/40 border border-[#00F2FE]/30 shadow-[0_0_15px_rgba(0,242,254,0.1)]">

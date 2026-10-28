@@ -133,7 +133,7 @@ function DigitalTwinContent() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] bg-[#050B14] text-white overflow-hidden relative">
+    <div className="space-y-4 max-w-[1920px] mx-auto pb-8 relative z-10 text-white">
       
       {/* 1. TOP OPERATIONAL COMMAND BAR (#twin-command-bar) */}
       <TwinCommandBar
@@ -148,7 +148,7 @@ function DigitalTwinContent() {
       />
 
       {/* 2. 3D EOC TACTICAL DASHBOARD VIEWPORT */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:h-[calc(100vh-12rem)] lg:min-h-[640px]">
         
         {/* LEFT CONTROLS RAIL (#twin-controls-rail) */}
         <SurgeLevelSlider
@@ -166,7 +166,7 @@ function DigitalTwinContent() {
         />
 
         {/* CENTER: 3D COASTAL INUNDATION MAP CANVAS & TIMELINE */}
-        <div className="flex-1 flex flex-col min-h-[500px] overflow-hidden relative">
+        <div className="flex-1 flex flex-col gap-3 min-h-[500px] lg:h-full overflow-hidden">
           <DigitalTwinMap
             district={selectedDistrict}
             storm={selectedStorm}
@@ -231,7 +231,7 @@ export default function DigitalTwinPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#050B14] flex items-center justify-center text-[#00F2FE] font-rajdhani text-lg">
+        <div className="min-h-[60vh] bg-transparent flex items-center justify-center text-[#00F2FE] font-rajdhani text-lg">
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-2 border-[#00F2FE] border-t-transparent rounded-full animate-spin" />
             <span>INITIALIZING COASTAL INUNDATION DIGITAL TWIN...</span>

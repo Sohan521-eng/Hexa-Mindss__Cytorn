@@ -79,7 +79,7 @@ export function SurgeTimeline({
   return (
     <div
       id="surge-timeline-scrubber"
-      className="w-full bg-[#0F1B2F]/95 backdrop-blur-2xl border-t border-[#00F2FE]/25 px-3 sm:px-6 py-2.5 z-20 shadow-[0_-10px_30px_rgba(0,0,0,0.6)] flex flex-col gap-2"
+      className="w-full rounded-2xl bg-[#0F1B2F]/80 backdrop-blur-xl border border-[#00F2FE]/25 px-3 sm:px-6 py-2.5 z-20 shadow-2xl flex flex-col gap-2"
     >
       {/* Top Row: Playback Controls, Active Timestamp & Speed */}
       <div className="flex flex-wrap items-center justify-between gap-2">

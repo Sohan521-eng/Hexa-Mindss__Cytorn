@@ -76,7 +76,7 @@ export function DistrictImpactRail({
   return (
     <aside
       id="district-impact-rail"
-      className="w-full lg:w-80 xl:w-96 shrink-0 bg-[#0F1B2F]/90 backdrop-blur-xl border-l border-[#00F2FE]/20 flex flex-col p-4 gap-4 overflow-y-auto text-white"
+      className="w-full lg:w-80 xl:w-96 shrink-0 rounded-2xl bg-[#0F1B2F]/80 backdrop-blur-xl border border-[#00F2FE]/25 flex flex-col p-4 gap-4 overflow-y-auto text-white shadow-2xl"
     >
       {/* 1. Header & District Title */}
       <div className="flex items-center justify-between border-b border-[#1E3A5F] pb-3">
