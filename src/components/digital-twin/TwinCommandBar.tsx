@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { StormContext, DistrictInfo, RbacRole } from "./types";
 import { STORMS_REGISTRY, DISTRICTS_REGISTRY } from "./digitalTwinData";
+import Noise from "@/components/ui/Noise";
 
 interface TwinCommandBarProps {
   selectedStorm: StormContext;
@@ -41,9 +42,25 @@ export function TwinCommandBar({
   return (
     <header 
       id="twin-command-bar"
-      className="w-full rounded-2xl bg-[#0F1B2F]/80 backdrop-blur-xl border border-[#00F2FE]/25 px-3 sm:px-6 py-3 transition-all z-30 shadow-2xl"
+      className="relative z-30 w-full rounded-2xl overflow-hidden px-3 sm:px-6 py-3 transition-all duration-200 bg-transparent"
+      style={{
+        border: "1.5px solid rgba(0, 242, 254, 0.45)",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,242,254,0.12), 0 0 18px rgba(0,242,254,0.15)",
+      }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Background layer with Noise & subtle ambient cyan glow */}
+      <div className="absolute inset-0 bg-[#0F1B2F]/85 backdrop-blur-xl pointer-events-none rounded-2xl overflow-hidden">
+        <Noise
+          patternSize={250}
+          patternScaleX={1.2}
+          patternScaleY={1.2}
+          patternRefreshInterval={2}
+          patternAlpha={14}
+        />
+        <div className="absolute top-0 right-1/4 w-96 h-24 bg-[#00F2FE]/10 blur-3xl pointer-events-none" />
+      </div>
+
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
         
         {/* Left Section: Back Link, Title & Mission Code */}
         <div className="flex items-center gap-3">
