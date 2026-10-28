@@ -387,7 +387,7 @@ function TwinSurgeSelectorPill({
         label={
           <span className="flex items-center gap-1.5 sm:gap-2">
             <span className="text-[10px] text-slate-400 font-normal">SURGE:</span>
-            <span>+{surgeLevel.toFixed(1)}m AAT</span>
+            <span>+{surgeLevel.toFixed(1)}m AAT {surgeLevel >= 4.0 ? "(Catastrophic)" : surgeLevel >= 3.0 ? "(Severe)" : ""}</span>
             <ChevronDown style={{ width: 12, height: 12, opacity: 0.7, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
           </span>
         }
