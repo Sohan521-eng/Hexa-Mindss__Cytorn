@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronDown, 
-  ShieldAlert, 
   Compass, 
   SlidersHorizontal,
   Flame,
@@ -468,8 +467,8 @@ interface TwinCommandBarProps {
   onSelectDistrict: (district: DistrictInfo) => void;
   surgeLevel: number;
   onSelectSurgeLevel: (level: number) => void;
-  rbacRole: RbacRole;
-  onChangeRbacRole: (role: RbacRole) => void;
+  rbacRole?: RbacRole;
+  onChangeRbacRole?: (role: RbacRole) => void;
 }
 
 export function TwinCommandBar({
@@ -479,8 +478,6 @@ export function TwinCommandBar({
   onSelectDistrict,
   surgeLevel,
   onSelectSurgeLevel,
-  rbacRole,
-  onChangeRbacRole,
 }: TwinCommandBarProps) {
   return (
     <header 
@@ -541,61 +538,6 @@ export function TwinCommandBar({
             surgeLevel={surgeLevel}
             onSelectSurgeLevel={onSelectSurgeLevel}
           />
-
-        </div>
-
-        {/* Right Section: RBAC Badge & Pulsing Warning Indicator */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          
-          {/* RBAC Role Selector Badge */}
-          <div className="flex items-center rounded-lg bg-[#050B14]/80 p-0.5 border border-[#1E3A5F]">
-            <button
-              onClick={() => onChangeRbacRole("scientist")}
-              className={`px-2 py-1 rounded text-[10px] font-rajdhani font-bold transition-all ${
-                rbacRole === "scientist"
-                  ? "bg-[#00F2FE]/20 text-[#00F2FE] border border-[#00F2FE]/50 shadow-[0_0_8px_rgba(0,242,254,0.3)]"
-                  : "text-slate-400 hover:text-white"
-              }`}
-              title="Scientist Access: 10m High-Resolution DEM Mesh"
-            >
-              10m MESH
-            </button>
-            <button
-              onClick={() => onChangeRbacRole("eoc")}
-              className={`px-2 py-1 rounded text-[10px] font-rajdhani font-bold transition-all ${
-                rbacRole === "eoc"
-                  ? "bg-[#10E7A2]/20 text-[#10E7A2] border border-[#10E7A2]/50 shadow-[0_0_8px_rgba(16,231,162,0.3)]"
-                  : "text-slate-400 hover:text-white"
-              }`}
-              title="Disaster EOC: District Evacuation Matrix"
-            >
-              EOC MATRIX
-            </button>
-            <button
-              onClick={() => onChangeRbacRole("public")}
-              className={`px-2 py-1 rounded text-[10px] font-rajdhani font-bold transition-all ${
-                rbacRole === "public"
-                  ? "bg-[#FF5E36]/20 text-[#FF5E36] border border-[#FF5E36]/50 shadow-[0_0_8px_rgba(255,94,54,0.3)]"
-                  : "text-slate-400 hover:text-white"
-              }`}
-              title="Public Access: 1km Zonal Flood View"
-            >
-              ZONAL
-            </button>
-          </div>
-
-          {/* Pulsing IMD Stage 3 Warning Badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#FF5E36]/15 border border-[#FF5E36]/40 text-[#FF5E36] shadow-[0_0_15px_rgba(255,94,54,0.25)] animate-pulse">
-            <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-            <div className="flex flex-col leading-none">
-              <span className="text-[10px] font-chakra font-bold tracking-wider uppercase">
-                STAGE 3 WARNING
-              </span>
-              <span className="text-[9px] font-jetbrains font-bold text-amber-300">
-                ETA T-{selectedStorm.landfallEtaHours}H
-              </span>
-            </div>
-          </div>
 
         </div>
 
