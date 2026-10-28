@@ -21,6 +21,7 @@ import {
   InfrastructureType 
 } from "./types";
 import { CONTOUR_TIERS_CONFIG } from "./digitalTwinData";
+import Noise from "@/components/ui/Noise";
 
 interface SurgeLevelSliderProps {
   surgeLevel: number;
@@ -92,9 +93,26 @@ export function SurgeLevelSlider({
   return (
     <aside
       id="twin-controls-rail"
-      className="w-full lg:w-72 xl:w-80 shrink-0 rounded-2xl bg-[#0F1B2F]/80 backdrop-blur-xl border border-[#00F2FE]/25 flex flex-col p-4 gap-4 overflow-y-auto text-white shadow-2xl"
+      className="relative z-20 w-full lg:w-72 xl:w-80 shrink-0 rounded-2xl overflow-hidden border border-[#00F2FE]/25 flex flex-col text-white shadow-2xl transition-all duration-200 bg-transparent"
+      style={{
+        border: "1.5px solid rgba(0, 242, 254, 0.45)",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,242,254,0.12), 0 0 18px rgba(0,242,254,0.15)",
+      }}
     >
-      {/* 1. Countdown to Surge Landfall */}
+      {/* Background layer with Noise & subtle ambient cyan glow */}
+      <div className="absolute inset-0 bg-[#0F1B2F]/85 backdrop-blur-xl pointer-events-none rounded-2xl overflow-hidden">
+        <Noise
+          patternSize={250}
+          patternScaleX={1.2}
+          patternScaleY={1.2}
+          patternRefreshInterval={2}
+          patternAlpha={25}
+        />
+        <div className="absolute top-0 right-0 w-72 h-36 bg-[#00F2FE]/10 blur-3xl pointer-events-none" />
+      </div>
+
+      <div className="relative z-10 flex-1 flex flex-col p-4 gap-4 overflow-y-auto custom-scrollbar">
+        {/* 1. Countdown to Surge Landfall */}
       <div className="rounded-xl p-3 bg-gradient-to-br from-[#050B14] to-[#0E3D59]/40 border border-[#00F2FE]/30 shadow-[0_0_15px_rgba(0,242,254,0.1)]">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1.5 text-xs font-rajdhani font-bold text-slate-300 uppercase tracking-wider">
@@ -366,6 +384,7 @@ export function SurgeLevelSlider({
             <span className="text-[10px] font-rajdhani font-bold truncate">Ports & Coastal Habitations (4)</span>
           </button>
         </div>
+      </div>
       </div>
     </aside>
   );
