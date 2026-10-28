@@ -1,13 +1,9 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { 
-  Waves, 
   ChevronDown, 
   ShieldAlert, 
-  UserCheck, 
-  ArrowLeft, 
   Compass, 
   SlidersHorizontal,
   Flame
@@ -62,35 +58,14 @@ export function TwinCommandBar({
 
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
         
-        {/* Left Section: Back Link, Title & Mission Code */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/alerts"
-            className="group flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#050B14]/80 border border-[#00F2FE]/20 hover:border-[#00F2FE] hover:bg-[#00F2FE]/10 text-xs font-rajdhani font-semibold text-slate-300 hover:text-[#00F2FE] transition-all"
-            title="Return to Disaster Warning Hub"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
-            <span className="hidden sm:inline">ALERTS</span>
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00F2FE]/20 to-[#0E3D59] border border-[#00F2FE]/50 flex items-center justify-center shadow-[0_0_12px_rgba(0,242,254,0.3)]">
-              <Waves className="w-4 h-4 text-[#00F2FE] animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-sm sm:text-base font-orbitron font-extrabold uppercase tracking-wider text-white">
-                  DIGITAL TWIN
-                </h1>
-                <span className="text-[10px] font-share-mono uppercase tracking-widest px-1.5 py-0.2 rounded bg-[#00F2FE]/15 text-[#00F2FE] border border-[#00F2FE]/30 font-bold">
-                  PAGE 09
-                </span>
-              </div>
-              <p className="text-[10px] font-rajdhani text-slate-400 hidden md:block">
-                Hyper-Local Coastal Inundation & Sub-Street Hydrodynamic Simulation
-              </p>
-            </div>
-          </div>
+        {/* Left Section: Title & Subtitle */}
+        <div className="flex flex-col justify-center">
+          <h1 className="text-sm sm:text-base font-orbitron font-extrabold uppercase tracking-wider text-white">
+            DIGITAL TWIN
+          </h1>
+          <p className="text-[10px] font-rajdhani text-slate-400 hidden md:block">
+            Hyper-Local Coastal Inundation &amp; Sub-Street Hydrodynamic Simulation
+          </p>
         </div>
 
         {/* Center: Operational Selectors (Storm, District, Surge) */}
