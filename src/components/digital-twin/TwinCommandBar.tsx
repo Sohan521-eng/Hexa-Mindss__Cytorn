@@ -55,7 +55,7 @@ export function TwinCommandBar({
           patternScaleX={1.2}
           patternScaleY={1.2}
           patternRefreshInterval={2}
-          patternAlpha={14}
+          patternAlpha={25}
         />
         <div className="absolute top-0 right-1/4 w-96 h-24 bg-[#00F2FE]/10 blur-3xl pointer-events-none" />
       </div>
