@@ -120,10 +120,10 @@ function TwinStormSelectorPill({
         handleLeave={handleLeave}
         open={open}
         onClick={() => { if (!open) updateDropPos(); setOpen((o) => !o); }}
-        icon={<Flame style={{ width: 14, height: 14, color: "#FF5E36" }} />}
+        icon={<Flame style={{ width: 14, height: 14 }} />}
         label={
           <span className="flex items-center gap-1.5 sm:gap-2">
-            <span className="text-[10px] text-slate-400 font-normal">STORM:</span>
+            <span className="text-[10px] opacity-75 font-normal">STORM:</span>
             <span>{selectedStorm.name} ({selectedStorm.code})</span>
             <ChevronDown style={{ width: 12, height: 12, opacity: 0.7, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
           </span>
@@ -251,10 +251,10 @@ function TwinDistrictSelectorPill({
         handleLeave={handleLeave}
         open={open}
         onClick={() => { if (!open) updateDropPos(); setOpen((o) => !o); }}
-        icon={<Compass style={{ width: 14, height: 14, color: "#00F2FE" }} />}
+        icon={<Compass style={{ width: 14, height: 14 }} />}
         label={
           <span className="flex items-center gap-1.5 sm:gap-2">
-            <span className="text-[10px] text-slate-400 font-normal">DISTRICT:</span>
+            <span className="text-[10px] opacity-75 font-normal">DISTRICT:</span>
             <span>{selectedDistrict.name}, {selectedDistrict.state}</span>
             <ChevronDown style={{ width: 12, height: 12, opacity: 0.7, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
           </span>
@@ -383,10 +383,10 @@ function TwinSurgeSelectorPill({
         handleLeave={handleLeave}
         open={open}
         onClick={() => { if (!open) updateDropPos(); setOpen((o) => !o); }}
-        icon={<SlidersHorizontal style={{ width: 14, height: 14, color: "#10E7A2" }} />}
+        icon={<SlidersHorizontal style={{ width: 14, height: 14 }} />}
         label={
           <span className="flex items-center gap-1.5 sm:gap-2">
-            <span className="text-[10px] text-slate-400 font-normal">SURGE:</span>
+            <span className="text-[10px] opacity-75 font-normal">SURGE:</span>
             <span>+{surgeLevel.toFixed(1)}m AAT {surgeLevel >= 4.0 ? "(Catastrophic)" : surgeLevel >= 3.0 ? "(Severe)" : ""}</span>
             <ChevronDown style={{ width: 12, height: 12, opacity: 0.7, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
           </span>
