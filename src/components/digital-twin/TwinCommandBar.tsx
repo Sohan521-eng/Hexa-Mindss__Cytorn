@@ -514,7 +514,9 @@ export function TwinCommandBar({
               </span>
             </span>
           </h1>
-          <p className="text-[10px] sm:text-xs font-rajdhani text-slate-400 hidden md:block mt-0.5">
+          <p 
+            className="text-[10px] sm:text-xs font-rajdhani font-medium text-[#00F2FE] hidden md:block mt-0.5 [text-shadow:0_2px_4px_rgba(0,0,0,0.95)] tracking-wide"
+          >
             Hyper-Local Coastal Inundation &amp; Sub-Street Hydrodynamic Simulation
           </p>
         </div>
