@@ -60,10 +60,14 @@ export function TwinCommandBar({
         
         {/* Left Section: Title & Subtitle */}
         <div className="flex flex-col justify-center">
-          <h1 className="text-sm sm:text-base font-orbitron font-extrabold uppercase tracking-wider text-white">
-            DIGITAL TWIN
+          <h1 className="text-lg sm:text-xl md:text-2xl font-black font-rajdhani uppercase tracking-wider flex items-center leading-tight">
+            <span className="heading-gradient-shadow-wrapper">
+              <span className="heading-moving-gradient font-black font-rajdhani uppercase tracking-wider">
+                DIGITAL TWIN
+              </span>
+            </span>
           </h1>
-          <p className="text-[10px] font-rajdhani text-slate-400 hidden md:block">
+          <p className="text-[10px] sm:text-xs font-rajdhani text-slate-400 hidden md:block mt-0.5">
             Hyper-Local Coastal Inundation &amp; Sub-Street Hydrodynamic Simulation
           </p>
         </div>
