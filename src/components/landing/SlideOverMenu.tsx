@@ -160,91 +160,133 @@ export function SlideOverMenu({ isOpen, onClose }: SlideOverMenuProps) {
   return (
     <div 
       ref={containerRef}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose();
-      }}
-      className="fixed inset-0 z-[100] flex flex-col justify-between bg-[#050B14]/95 backdrop-blur-2xl text-white font-jakarta px-6 sm:px-16 py-6 sm:py-8 overflow-y-auto will-change-[transform,opacity]"
+      className="fixed inset-0 z-[100] bg-[#050B14] text-white font-jakarta overflow-hidden will-change-[transform,opacity]"
     >
-      {/* Background Atmosphere Radial Glow - Fixed to prevent any cutoff during scroll */}
-      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_100%_80%_at_50%_100%,rgba(0,242,254,0.12)_0%,transparent_70%)]" />
-      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(16,231,162,0.04)_0%,transparent_60%)]" />
+      {/* 1. PERMANENT FULL-VIEWPORT BACKGROUND ARCHITECTURE (Seamless in all screen views, never cuts off) */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Base abyss solid fill */}
+        <div className="absolute inset-0 bg-[#050B14]" />
 
-      {/* TOP BAR */}
-      <div 
-        ref={topBarRef}
-        className="relative z-10 flex items-center justify-between border-b border-[#1E3252]/60 pb-6 will-change-[transform,opacity]"
-      >
-        <Link 
-          href="/" 
-          onClick={handleClose}
-          className="group flex items-center gap-1.5 sm:gap-2 shrink-0"
-        >
-          <Image 
-            src="/logo.png" 
-            alt="CYTORN Logo" 
-            width={64} 
-            height={64} 
-            unoptimized
-            className="w-11 h-11 sm:w-13 sm:h-13 md:w-14 md:h-14 object-contain translate-y-0.5 sm:translate-y-1 drop-shadow-[0_4px_12px_rgba(0,0,0,0.7)] drop-shadow-[0_0_8px_rgba(0,242,254,0.35)] group-hover:scale-105 group-hover:drop-shadow-[0_0_16px_rgba(0,242,254,0.65)] transition-all duration-300 shrink-0"
-          />
-          <div className="flex flex-col">
-            <span 
-              className="text-lg sm:text-2xl font-extrabold tracking-[0.06em] text-white font-orbitron uppercase transition-all duration-300 group-hover:text-[#00F2FE] group-hover:[text-shadow:0_2px_4px_#000000,0_0_16px_rgba(0,242,254,0.9)]"
-              style={{
-                textShadow: "0 2px 4px #000000, 0 4px 12px rgba(0, 0, 0, 0.9), 0 0 16px rgba(0, 242, 254, 0.35)"
-              }}
-            >
-              CYTORN
-            </span>
-            <span 
-              className="text-[7px] sm:text-[8.5px] uppercase tracking-[0.18em] text-slate-300 mt-1 font-jetbrains font-semibold transition-colors duration-300 group-hover:text-[#00F2FE]/80"
-              style={{
-                textShadow: "0 1px 3px #000000, 0 2px 6px rgba(0, 0, 0, 0.95)"
-              }}
-            >
-              Deep-Tech Climate OS
-            </span>
-          </div>
-        </Link>
+        {/* Primary Bottom Cyclone Cyan Atmosphere */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: "radial-gradient(ellipse 120% 90% at 50% 100%, rgba(0, 242, 254, 0.16) 0%, rgba(5, 11, 20, 0) 75%)",
+          }}
+        />
 
-        <button
-          onClick={handleClose}
-          aria-label="Close navigation drawer"
-          className="p-2.5 rounded-full bg-[#0F1B2F] border border-[#1E3252] text-slate-300 hover:text-[#00F2FE] hover:border-[#00F2FE] transition-all hover:rotate-90 duration-300 cursor-pointer"
-        >
-          <X className="w-6 h-6" />
-        </button>
+        {/* Secondary Top-Right Cyan Radiance */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: "radial-gradient(circle at 90% 10%, rgba(0, 242, 254, 0.08) 0%, rgba(5, 11, 20, 0) 60%)",
+          }}
+        />
+
+        {/* Tertiary Top-Left Safe Mint Atmosphere */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: "radial-gradient(circle at 10% 15%, rgba(16, 231, 162, 0.05) 0%, rgba(5, 11, 20, 0) 50%)",
+          }}
+        />
+
+        {/* Subtle Cyber Meteorological Grid - guarantees consistent visual depth across any resolution */}
+        <div 
+          className="absolute inset-0 opacity-[0.035]"
+          style={{
+            backgroundImage: `linear-gradient(to right, rgba(0, 242, 254, 0.4) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 242, 254, 0.4) 1px, transparent 1px)`,
+            backgroundSize: '48px 48px',
+          }}
+        />
+
+        {/* Glassmorphic Atmosphere Wash */}
+        <div className="absolute inset-0 backdrop-blur-2xl bg-[#050B14]/80" />
       </div>
 
-      {/* EDITORIAL NAVIGATION LINKS (EVENLY DISTRIBUTED TO FILL VIEWPORT) */}
-      <nav 
-        ref={navRef}
-        className="relative z-10 flex-1 flex flex-col justify-evenly py-2 sm:py-4 max-w-5xl w-full min-h-0"
+      {/* 2. SCROLLABLE INTERACTION VIEWPORT */}
+      <div 
+        onClick={(e) => {
+          if (e.target === e.currentTarget) handleClose();
+        }}
+        className="relative z-10 w-full h-full flex flex-col justify-between px-6 sm:px-16 py-5 sm:py-8 overflow-y-auto"
       >
-        {menuItems.map((item) => (
-          <Link
-            key={item.num}
-            href={item.href}
+        {/* TOP BAR */}
+        <div 
+          ref={topBarRef}
+          className="relative z-10 flex items-center justify-between border-b border-[#1E3252]/60 pb-5 sm:pb-6 will-change-[transform,opacity] shrink-0"
+        >
+          <Link 
+            href="/" 
             onClick={handleClose}
-            className="nav-menu-item group flex flex-col sm:flex-row sm:items-baseline gap-1.5 sm:gap-6 py-1.5 sm:py-2.5 border-b border-[#1E3252]/40 transition-colors will-change-[transform,opacity]"
+            className="group flex items-center gap-1.5 sm:gap-2 shrink-0"
           >
-            <span className="font-jetbrains text-xs sm:text-sm text-[#00F2FE] group-hover:text-white transition-colors">
-              {item.num} /
-            </span>
-            <div className="flex-1">
-              <span className="text-xl sm:text-3xl md:text-4xl lg:text-[2.6rem] font-bold tracking-tight text-slate-200 group-hover:text-[#00F2FE] transition-colors font-rajdhani uppercase leading-tight">
-                {item.name}
+            <Image 
+              src="/logo.png" 
+              alt="CYTORN Logo" 
+              width={64} 
+              height={64} 
+              unoptimized
+              className="w-11 h-11 sm:w-13 sm:h-13 md:w-14 md:h-14 object-contain translate-y-0.5 sm:translate-y-1 drop-shadow-[0_4px_12px_rgba(0,0,0,0.7)] drop-shadow-[0_0_8px_rgba(0,242,254,0.35)] group-hover:scale-105 group-hover:drop-shadow-[0_0_16px_rgba(0,242,254,0.65)] transition-all duration-300 shrink-0"
+            />
+            <div className="flex flex-col">
+              <span 
+                className="text-lg sm:text-2xl font-extrabold tracking-[0.06em] text-white font-orbitron uppercase transition-all duration-300 group-hover:text-[#00F2FE] group-hover:[text-shadow:0_2px_4px_#000000,0_0_16px_rgba(0,242,254,0.9)]"
+                style={{
+                  textShadow: "0 2px 4px #000000, 0 4px 12px rgba(0, 0, 0, 0.9), 0 0 16px rgba(0, 242, 254, 0.35)"
+                }}
+              >
+                CYTORN
               </span>
-              <p className="text-xs sm:text-sm text-[#8E9EB5] font-jakarta font-normal mt-0.5 group-hover:text-slate-300">
-                {item.desc}
-              </p>
-              {/* Expanding Underline Hover */}
-              <span className="block h-[2px] w-0 bg-[#00F2FE] transition-all duration-500 ease-out group-hover:w-full mt-1.5 shadow-[0_0_8px_#00F2FE]" />
+              <span 
+                className="text-[7px] sm:text-[8.5px] uppercase tracking-[0.18em] text-slate-300 mt-1 font-jetbrains font-semibold transition-colors duration-300 group-hover:text-[#00F2FE]/80"
+                style={{
+                  textShadow: "0 1px 3px #000000, 0 2px 6px rgba(0, 0, 0, 0.95)"
+                }}
+              >
+                Deep-Tech Climate OS
+              </span>
             </div>
           </Link>
-        ))}
-      </nav>
 
+          <button
+            onClick={handleClose}
+            aria-label="Close navigation drawer"
+            className="p-2.5 rounded-full bg-[#0F1B2F] border border-[#1E3252] text-slate-300 hover:text-[#00F2FE] hover:border-[#00F2FE] transition-all hover:rotate-90 duration-300 cursor-pointer"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* EDITORIAL NAVIGATION LINKS (EVENLY DISTRIBUTED TO FILL VIEWPORT) */}
+        <nav 
+          ref={navRef}
+          className="relative z-10 flex-1 flex flex-col justify-evenly py-2 sm:py-4 w-full max-w-5xl min-h-0"
+        >
+          {menuItems.map((item) => (
+            <Link
+              key={item.num}
+              href={item.href}
+              onClick={handleClose}
+              className="nav-menu-item group flex flex-col sm:flex-row sm:items-baseline gap-1.5 sm:gap-6 py-1.5 sm:py-2.5 border-b border-[#1E3252]/40 transition-colors will-change-[transform,opacity]"
+            >
+              <span className="font-jetbrains text-xs sm:text-sm text-[#00F2FE] group-hover:text-white transition-colors shrink-0">
+                {item.num} /
+              </span>
+              <div className="flex-1">
+                <span className="text-xl sm:text-3xl md:text-4xl lg:text-[2.6rem] font-bold tracking-tight text-slate-200 group-hover:text-[#00F2FE] transition-colors font-rajdhani uppercase leading-tight">
+                  {item.name}
+                </span>
+                <p className="text-xs sm:text-sm text-[#8E9EB5] font-jakarta font-normal mt-0.5 group-hover:text-slate-300">
+                  {item.desc}
+                </p>
+                {/* Expanding Underline Hover */}
+                <span className="block h-[2px] w-0 bg-[#00F2FE] transition-all duration-500 ease-out group-hover:w-full mt-1.5 shadow-[0_0_8px_#00F2FE]" />
+              </div>
+            </Link>
+          ))}
+        </nav>
+      </div>
     </div>
   );
 }
