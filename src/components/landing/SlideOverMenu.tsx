@@ -165,8 +165,9 @@ export function SlideOverMenu({ isOpen, onClose }: SlideOverMenuProps) {
       }}
       className="fixed inset-0 z-[100] flex flex-col justify-between bg-[#050B14]/95 backdrop-blur-2xl text-white font-jakarta px-6 sm:px-16 py-6 sm:py-8 overflow-y-auto will-change-[transform,opacity]"
     >
-      {/* Background Atmosphere Radial Glow */}
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_60%_at_50%_100%,rgba(0,242,254,0.12)_0%,transparent_70%)]" />
+      {/* Background Atmosphere Radial Glow - Fixed to prevent any cutoff during scroll */}
+      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_100%_80%_at_50%_100%,rgba(0,242,254,0.12)_0%,transparent_70%)]" />
+      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(16,231,162,0.04)_0%,transparent_60%)]" />
 
       {/* TOP BAR */}
       <div 
@@ -218,27 +219,27 @@ export function SlideOverMenu({ isOpen, onClose }: SlideOverMenuProps) {
       {/* EDITORIAL NAVIGATION LINKS (EVENLY DISTRIBUTED TO FILL VIEWPORT) */}
       <nav 
         ref={navRef}
-        className="relative z-10 flex-1 flex flex-col justify-evenly py-4 sm:py-6 max-w-5xl w-full min-h-[460px]"
+        className="relative z-10 flex-1 flex flex-col justify-evenly py-2 sm:py-4 max-w-5xl w-full min-h-0"
       >
         {menuItems.map((item) => (
           <Link
             key={item.num}
             href={item.href}
             onClick={handleClose}
-            className="nav-menu-item group flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-6 py-2.5 sm:py-3 border-b border-[#1E3252]/40 transition-colors will-change-[transform,opacity]"
+            className="nav-menu-item group flex flex-col sm:flex-row sm:items-baseline gap-1.5 sm:gap-6 py-1.5 sm:py-2.5 border-b border-[#1E3252]/40 transition-colors will-change-[transform,opacity]"
           >
             <span className="font-jetbrains text-xs sm:text-sm text-[#00F2FE] group-hover:text-white transition-colors">
               {item.num} /
             </span>
             <div className="flex-1">
-              <span className="text-2xl sm:text-4xl md:text-[2.6rem] font-bold tracking-tight text-slate-200 group-hover:text-[#00F2FE] transition-colors font-rajdhani uppercase leading-tight">
+              <span className="text-xl sm:text-3xl md:text-4xl lg:text-[2.6rem] font-bold tracking-tight text-slate-200 group-hover:text-[#00F2FE] transition-colors font-rajdhani uppercase leading-tight">
                 {item.name}
               </span>
               <p className="text-xs sm:text-sm text-[#8E9EB5] font-jakarta font-normal mt-0.5 group-hover:text-slate-300">
                 {item.desc}
               </p>
               {/* Expanding Underline Hover */}
-              <span className="block h-[2px] w-0 bg-[#00F2FE] transition-all duration-500 ease-out group-hover:w-full mt-2 shadow-[0_0_8px_#00F2FE]" />
+              <span className="block h-[2px] w-0 bg-[#00F2FE] transition-all duration-500 ease-out group-hover:w-full mt-1.5 shadow-[0_0_8px_#00F2FE]" />
             </div>
           </Link>
         ))}
