@@ -1,0 +1,5 @@
+---
+trigger: always_on
+---
+
+DO NOT PUSH ANYTHING INTO THE GITHUB REPO UNTIL I COMMAND YOU TO DO SO

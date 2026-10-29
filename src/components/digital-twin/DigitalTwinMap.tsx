@@ -7,7 +7,6 @@ import {
   Plus, 
   Minus, 
   Ruler, 
-  TrendingDown, 
   Crosshair, 
   Building2, 
   Shield, 
@@ -17,9 +16,8 @@ import {
   AlertTriangle, 
   CheckCircle2, 
   X,
-  Compass,
-  Layers,
-  MapPin,
+  Layers, 
+  MapPin, 
   Waves
 } from "lucide-react";
 import { 
@@ -30,6 +28,7 @@ import {
   SurgeContourLevel, 
   InfrastructureType 
 } from "./types";
+import Noise from "@/components/ui/Noise";
 import { 
   CRITICAL_INFRASTRUCTURE, 
   calculatePoiStatus, 
@@ -48,7 +47,6 @@ interface DigitalTwinMapProps {
   visibleLayers: Record<InfrastructureType, boolean>;
   selectedPoi: InfrastructurePOI | null;
   onSelectPoi: (poi: InfrastructurePOI | null) => void;
-  onOpenTransectModal: () => void;
 }
 
 // MapLibre base raster tile configuration
@@ -120,7 +118,6 @@ export function DigitalTwinMap({
   visibleLayers,
   selectedPoi,
   onSelectPoi,
-  onOpenTransectModal,
 }: DigitalTwinMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -138,6 +135,20 @@ export function DigitalTwinMap({
   // Ruler Tool State
   const [isRulerActive, setIsRulerActive] = useState(false);
   const [rulerPoints, setRulerPoints] = useState<Array<{ lng: number; lat: number }>>([]);
+  const isRulerActiveRef = useRef(isRulerActive);
+
+  useEffect(() => {
+    isRulerActiveRef.current = isRulerActive;
+    const map = mapInstanceRef.current;
+    if (map) {
+      try {
+        const canvas = map.getCanvas();
+        if (canvas) {
+          canvas.style.cursor = isRulerActive ? "crosshair" : "";
+        }
+      } catch {}
+    }
+  }, [isRulerActive]);
 
   // Time progression multiplier (peak surge at T+28h)
   const timeFactor = Math.max(0.15, 1 - Math.abs(currentHour - 28) / 36);
@@ -204,6 +215,11 @@ export function DigitalTwinMap({
             mapInstanceRef.current = map;
             setMapLoaded(true);
             setMapTick((t) => t + 1);
+            if (isRulerActiveRef.current) {
+              try {
+                map.getCanvas().style.cursor = "crosshair";
+              } catch {}
+            }
           }
         });
 
@@ -223,9 +239,10 @@ export function DigitalTwinMap({
         });
 
         map.on("click", (e: any) => {
-          if (isRulerActive) {
+          if (isRulerActiveRef.current) {
             const pt = { lng: +e.lngLat.lng.toFixed(4), lat: +e.lngLat.lat.toFixed(4) };
             setRulerPoints((prev) => (prev.length >= 2 ? [pt] : [...prev, pt]));
+            setMapTick((t) => t + 1);
           }
         });
       } catch (err) {
@@ -320,22 +337,23 @@ export function DigitalTwinMap({
     }
   };
 
-  // Calculate Haversine distance between ruler points
-  const calculateDistanceKm = () => {
-    if (rulerPoints.length < 2) return null;
-    const [p1, p2] = rulerPoints;
-    const R = 6371; // km
-    const dLat = ((p2.lat - p1.lat) * Math.PI) / 180;
-    const dLon = ((p2.lng - p1.lng) * Math.PI) / 180;
+  // Calculate Haversine distance between points (in km)
+  const calculateDistanceKm = useCallback((p1?: { lng: number; lat: number }, p2?: { lng: number; lat: number }) => {
+    const ptA = p1 || rulerPoints[0];
+    const ptB = p2 || rulerPoints[1];
+    if (!ptA || !ptB) return null;
+    const R = 6371; // Earth radius in km
+    const dLat = ((ptB.lat - ptA.lat) * Math.PI) / 180;
+    const dLon = ((ptB.lng - ptA.lng) * Math.PI) / 180;
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((p1.lat * Math.PI) / 180) *
-        Math.cos((p2.lat * Math.PI) / 180) *
+      Math.cos((ptA.lat * Math.PI) / 180) *
+        Math.cos((ptB.lat * Math.PI) / 180) *
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return +(R * c).toFixed(2);
-  };
+  }, [rulerPoints]);
 
   const measuredKm = calculateDistanceKm();
 
@@ -346,7 +364,11 @@ export function DigitalTwinMap({
     <div
       ref={containerRef}
       id="inundation-map-canvas"
-      className="relative flex-1 w-full h-full min-h-[480px] rounded-2xl overflow-hidden select-none border border-[#00F2FE]/25 bg-[#050B14]/60 backdrop-blur-md shadow-2xl"
+      className="relative flex-1 w-full h-full min-h-[480px] rounded-2xl overflow-hidden select-none bg-[#050B14]/60 backdrop-blur-md shadow-2xl transition-all duration-200"
+      style={{
+        border: "1.5px solid rgba(0, 242, 254, 0.45)",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,242,254,0.12), 0 0 18px rgba(0,242,254,0.15)",
+      }}
     >
       {/* 1. Underlying MapLibre GL WebGL Canvas Container */}
       <div
@@ -440,7 +462,51 @@ export function DigitalTwinMap({
           </g>
         )}
 
-        {/* Ruler Measurement Line & Label */}
+        {/* Ruler Measurement: 1 point placed (dynamic preview line to cursor) */}
+        {isRulerActive && rulerPoints.length === 1 && (() => {
+          const pt1 = projectPoint(rulerPoints[0].lng, rulerPoints[0].lat);
+          const pt2 = projectPoint(cursorGeo.lng, cursorGeo.lat);
+          if (!pt1) return null;
+          const liveKm = calculateDistanceKm(rulerPoints[0], { lng: cursorGeo.lng, lat: cursorGeo.lat });
+
+          return (
+            <g>
+              {/* Point A Anchor */}
+              <circle cx={pt1.x} cy={pt1.y} r="14" fill="none" stroke="#00F2FE" strokeWidth="1.5" className="animate-ping opacity-60" />
+              <circle cx={pt1.x} cy={pt1.y} r="6" fill="#00F2FE" stroke="#0F1B2F" strokeWidth="2" />
+              <text x={pt1.x} y={pt1.y - 12} fill="#00F2FE" fontSize="10" fontFamily="Rajdhani" fontWeight="bold" textAnchor="middle">
+                POINT A
+              </text>
+
+              {/* Dynamic ray to cursor */}
+              {pt2 && (
+                <>
+                  <line
+                    x1={pt1.x}
+                    y1={pt1.y}
+                    x2={pt2.x}
+                    y2={pt2.y}
+                    stroke="#00F2FE"
+                    strokeWidth="2"
+                    strokeDasharray="4 4"
+                    opacity="0.8"
+                  />
+                  <circle cx={pt2.x} cy={pt2.y} r="4" fill="#00F2FE" opacity="0.6" />
+                  {liveKm !== null && (
+                    <g transform={`translate(${(pt1.x + pt2.x) / 2}, ${(pt1.y + pt2.y) / 2 - 12})`}>
+                      <rect x="-35" y="-12" width="70" height="20" rx="4" fill="#0F1B2F" stroke="#00F2FE" strokeWidth="1" opacity="0.95" />
+                      <text x="0" y="2" fill="#00F2FE" fontSize="10" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
+                        ~{liveKm} km
+                      </text>
+                    </g>
+                  )}
+                </>
+              )}
+            </g>
+          );
+        })()}
+
+        {/* Ruler Measurement: 2 points locked in */}
         {rulerPoints.length === 2 && (() => {
           const pt1 = projectPoint(rulerPoints[0].lng, rulerPoints[0].lat);
           const pt2 = projectPoint(rulerPoints[1].lng, rulerPoints[1].lat);
@@ -457,12 +523,18 @@ export function DigitalTwinMap({
                 strokeWidth="2.5"
                 strokeDasharray="6 3"
               />
-              <circle cx={pt1.x} cy={pt1.y} r="5" fill="#00F2FE" />
-              <circle cx={pt2.x} cy={pt2.y} r="5" fill="#00F2FE" />
+              <circle cx={pt1.x} cy={pt1.y} r="6" fill="#00F2FE" stroke="#0F1B2F" strokeWidth="2" />
+              <text x={pt1.x} y={pt1.y - 10} fill="#00F2FE" fontSize="9.5" fontFamily="Rajdhani" fontWeight="bold" textAnchor="middle">
+                A
+              </text>
+              <circle cx={pt2.x} cy={pt2.y} r="6" fill="#00F2FE" stroke="#0F1B2F" strokeWidth="2" />
+              <text x={pt2.x} y={pt2.y - 10} fill="#00F2FE" fontSize="9.5" fontFamily="Rajdhani" fontWeight="bold" textAnchor="middle">
+                B
+              </text>
               {measuredKm && (
                 <g transform={`translate(${(pt1.x + pt2.x) / 2}, ${(pt1.y + pt2.y) / 2 - 12})`}>
-                  <rect x="-35" y="-12" width="70" height="20" rx="4" fill="#0F1B2F" stroke="#00F2FE" strokeWidth="1" />
-                  <text x="0" y="2" fill="#00F2FE" fontSize="10" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
+                  <rect x="-42" y="-13" width="84" height="22" rx="4" fill="#0F1B2F" stroke="#00F2FE" strokeWidth="1.5" />
+                  <text x="0" y="3" fill="#00F2FE" fontSize="11" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
                     {measuredKm} km
                   </text>
                 </g>
@@ -493,6 +565,12 @@ export function DigitalTwinMap({
               key={poi.id}
               onClick={(e) => {
                 e.stopPropagation();
+                if (isRulerActiveRef.current) {
+                  const rPt = { lng: poi.coordinates[0], lat: poi.coordinates[1] };
+                  setRulerPoints((prev) => (prev.length >= 2 ? [rPt] : [...prev, rPt]));
+                  setMapTick((t) => t + 1);
+                  return;
+                }
                 onSelectPoi(poi);
               }}
               style={{
@@ -538,108 +616,101 @@ export function DigitalTwinMap({
       </div>
 
       {/* 4. Top-Right Map Toolbox Bar */}
-      <div className="absolute top-4 right-4 z-25 flex items-center gap-1.5 p-1 rounded-xl bg-[#0F1B2F]/90 backdrop-blur-md border border-[#00F2FE]/30 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+      <div className="absolute top-4 right-4 z-25 flex items-center gap-1 p-1 rounded-lg bg-[#0F1B2F]/90 backdrop-blur-xl border border-[rgba(0,242,254,0.4)] shadow-[0_4px_16px_rgba(0,0,0,0.6),0_0_12px_rgba(0,242,254,0.15)]">
         
         {/* Orthodromic Distance Ruler */}
         <button
+          type="button"
           onClick={() => {
-            setIsRulerActive(!isRulerActive);
+            const next = !isRulerActive;
+            setIsRulerActive(next);
             setRulerPoints([]);
+            setMapTick((t) => t + 1);
           }}
-          className={`p-2 rounded-lg transition-colors cursor-pointer ${
+          className={`h-7 w-7 rounded-md border flex items-center justify-center transition cursor-pointer ${
             isRulerActive
-              ? "bg-[#00F2FE] text-[#050B14]"
-              : "text-slate-300 hover:text-[#00F2FE] hover:bg-[#00F2FE]/10"
+              ? "bg-[#00F2FE]/20 border-[#00F2FE]/70 text-[#00F2FE] shadow-[0_0_8px_rgba(0,242,254,0.25)]"
+              : "bg-[#050B14]/70 hover:bg-[#00F2FE]/20 border-[#1E3252] hover:border-[#00F2FE] text-[#8E9EB5] hover:text-[#00F2FE]"
           }`}
-          title={isRulerActive ? "Click 2 points on map to measure" : "Activate Orthodromic Distance Ruler"}
+          title={isRulerActive ? "Ruler Active: Click on map to measure distance (Click to disable)" : "Activate Orthodromic Distance Ruler"}
         >
-          <Ruler className="w-4 h-4" />
-        </button>
-
-        {/* Elevation Transect Tool */}
-        <button
-          onClick={onOpenTransectModal}
-          className="p-2 rounded-lg text-slate-300 hover:text-[#00F2FE] hover:bg-[#00F2FE]/10 transition-colors cursor-pointer"
-          title="Open Coastal Elevation Cross-Section Transect"
-        >
-          <TrendingDown className="w-4 h-4" />
+          <Ruler className="w-3.5 h-3.5" />
         </button>
 
         {/* Center on Landfall */}
         <button
+          type="button"
           onClick={handleCenterOnLandfall}
-          className="p-2 rounded-lg text-slate-300 hover:text-[#FF5E36] hover:bg-[#FF5E36]/10 transition-colors cursor-pointer"
+          className="h-7 w-7 rounded-md bg-[#050B14]/70 hover:bg-[#FF5E36]/20 border border-[#1E3252] hover:border-[#FF5E36] text-[#8E9EB5] hover:text-[#FF5E36] flex items-center justify-center transition cursor-pointer"
           title="Center Camera on Projected Landfall Sector"
         >
-          <Crosshair className="w-4 h-4" />
+          <Crosshair className="w-3.5 h-3.5" />
         </button>
 
-        <div className="w-[1px] h-5 bg-[#1E3A5F] mx-0.5" />
+        <div className="w-[1px] h-4 bg-[#1E3252] mx-0.5" />
 
         {/* Zoom In */}
         <button
+          type="button"
           onClick={handleZoomIn}
-          className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-[#00F2FE]/10 transition-colors cursor-pointer"
+          className="h-7 w-7 rounded-md bg-[#050B14]/70 hover:bg-[#00F2FE]/20 border border-[#1E3252] hover:border-[#00F2FE] text-[#8E9EB5] hover:text-[#00F2FE] flex items-center justify-center transition cursor-pointer"
           title="Zoom In"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
         </button>
 
         {/* Zoom Out */}
         <button
+          type="button"
           onClick={handleZoomOut}
-          className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-[#00F2FE]/10 transition-colors cursor-pointer"
+          className="h-7 w-7 rounded-md bg-[#050B14]/70 hover:bg-[#00F2FE]/20 border border-[#1E3252] hover:border-[#00F2FE] text-[#8E9EB5] hover:text-[#00F2FE] flex items-center justify-center transition cursor-pointer"
           title="Zoom Out"
         >
-          <Minus className="w-4 h-4" />
+          <Minus className="w-3.5 h-3.5" />
         </button>
 
         {/* Fullscreen Toggle */}
         <button
+          type="button"
           onClick={toggleFullscreen}
-          className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-[#00F2FE]/10 transition-colors cursor-pointer"
+          className="h-7 w-7 rounded-md bg-[#050B14]/70 hover:bg-[#00F2FE]/20 border border-[#1E3252] hover:border-[#00F2FE] text-[#8E9EB5] hover:text-[#00F2FE] flex items-center justify-center transition cursor-pointer"
           title="Toggle Fullscreen EOC Mode"
         >
-          {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
         </button>
       </div>
 
-      {/* 5. Bottom-Left Live Cursor Tracker HUD */}
-      <div className="absolute bottom-4 left-4 z-25 hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-[#0F1B2F]/90 backdrop-blur-md border border-[#00F2FE]/25 shadow-lg text-[10px] font-jetbrains text-slate-300">
-        <div className="flex items-center gap-1.5">
-          <Compass className="w-3.5 h-3.5 text-[#00F2FE]" />
-          <span>CURSOR:</span>
-          <span className="text-white font-bold">{cursorGeo.lat}°N, {cursorGeo.lng}°E</span>
-        </div>
-        <div className="w-[1px] h-3.5 bg-[#1E3A5F]" />
-        <div>
-          <span>GROUND: </span>
-          <span className={cursorGeo.elevation < effectiveSurge ? "text-[#EF4444] font-bold" : "text-[#10E7A2] font-bold"}>
-            {cursorGeo.elevation > 0 ? `+${cursorGeo.elevation}m` : `${cursorGeo.elevation}m`} MSL
-          </span>
-        </div>
-        <div className="w-[1px] h-3.5 bg-[#1E3A5F]" />
-        <div>
-          <span>SURGE: </span>
-          <span className="text-[#00F2FE] font-bold">+{effectiveSurge}m AAT</span>
-        </div>
-      </div>
 
       {/* 6. Active Ruler Readout Banner if Measuring */}
       {isRulerActive && (
-        <div className="absolute top-4 left-4 z-25 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#00F2FE]/15 border border-[#00F2FE] text-white text-xs font-rajdhani font-bold shadow-[0_0_15px_rgba(0,242,254,0.3)] animate-in fade-in">
+        <div className="absolute top-4 left-12 sm:left-14 z-25 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0F1B2F]/95 backdrop-blur-md border border-[#00F2FE] text-white text-xs font-rajdhani font-bold shadow-[0_0_15px_rgba(0,242,254,0.3)] animate-in fade-in">
           <Ruler className="w-4 h-4 text-[#00F2FE]" />
           <span>
             {rulerPoints.length === 0 && "CLICK 1ST POINT ON MAP TO START MEASUREMENT"}
-            {rulerPoints.length === 1 && "CLICK 2ND POINT TO COMPLETE DISTANCE"}
-            {rulerPoints.length === 2 && `MEASURED ORTHODROMIC DISTANCE: ${measuredKm} KM`}
+            {rulerPoints.length === 1 && "CLICK 2ND POINT TO LOCK IN DISTANCE"}
+            {rulerPoints.length === 2 && `MEASURED DISTANCE: ${measuredKm} KM`}
           </span>
+          {rulerPoints.length === 2 && (
+            <button
+              type="button"
+              onClick={() => {
+                setRulerPoints([]);
+                setMapTick((t) => t + 1);
+              }}
+              className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-[#00F2FE]/20 hover:bg-[#00F2FE]/30 text-[#00F2FE] border border-[#00F2FE]/50 transition-colors cursor-pointer"
+            >
+              RESET
+            </button>
+          )}
           <button
+            type="button"
             onClick={() => {
               setIsRulerActive(false);
               setRulerPoints([]);
+              setMapTick((t) => t + 1);
             }}
-            className="ml-2 hover:text-[#FF5E36] cursor-pointer"
+            className="ml-1 p-0.5 hover:text-[#FF5E36] transition-colors cursor-pointer"
+            title="Close Measurement"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -648,57 +719,92 @@ export function DigitalTwinMap({
 
       {/* 7. Selected POI Inspection Card */}
       {selectedPoi && (
-        <div className="absolute bottom-16 right-4 sm:right-6 z-35 w-72 sm:w-80 rounded-2xl bg-[#0F1B2F]/95 backdrop-blur-2xl border border-[#00F2FE]/40 p-4 shadow-[0_10px_35px_rgba(0,0,0,0.8)] text-white animate-in fade-in slide-in-from-bottom-2">
-          <div className="flex items-start justify-between gap-2 border-b border-[#1E3A5F] pb-2">
-            <div className="flex items-center gap-2">
-              {selectedPoi.type === "hospital" && <Building2 className="w-4 h-4 text-[#EF4444]" />}
-              {selectedPoi.type === "shelter" && <Shield className="w-4 h-4 text-[#10E7A2]" />}
-              {selectedPoi.type === "substation" && <Zap className="w-4 h-4 text-[#F59E0B]" />}
-              {selectedPoi.type === "highway" && <Route className="w-4 h-4 text-[#00F2FE]" />}
-              {(selectedPoi.type === "port" || selectedPoi.type === "cluster") && <Anchor className="w-4 h-4 text-[#93C5FD]" />}
-              <span className="text-xs font-rajdhani font-bold uppercase tracking-wider text-white">
-                {selectedPoi.name}
-              </span>
-            </div>
-            <button
-              onClick={() => onSelectPoi(null)}
-              className="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
+        <div 
+          className="absolute bottom-16 right-4 sm:right-6 z-35 w-72 sm:w-80 rounded-2xl overflow-hidden p-4 text-white shadow-[0_10px_35px_rgba(0,0,0,0.8)] animate-in fade-in slide-in-from-bottom-2"
+          style={{
+            border: "1.5px solid rgba(0, 242, 254, 0.45)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,242,254,0.15), 0 0 20px rgba(0,242,254,0.18)",
+          }}
+        >
+          {/* Noise and ambient glow background */}
+          <div className="absolute inset-0 bg-[#0F1B2F]/90 backdrop-blur-2xl pointer-events-none rounded-2xl overflow-hidden">
+            <Noise
+              patternSize={250}
+              patternScaleX={1.2}
+              patternScaleY={1.2}
+              patternRefreshInterval={2}
+              patternAlpha={25}
+            />
+            <div className="absolute top-0 right-0 w-36 h-20 bg-[#00F2FE]/10 blur-xl pointer-events-none" />
           </div>
 
-          {/* Quick Metrics */}
-          {(() => {
-            const { floodDepth, status } = calculatePoiStatus(selectedPoi, effectiveSurge);
-            return (
-              <div className="flex flex-col gap-2 mt-2.5">
-                <div className="grid grid-cols-2 gap-2 text-[10px] font-jetbrains">
-                  <div className="p-2 rounded-lg bg-[#050B14]">
-                    <span className="text-slate-500 block">BASE MSL:</span>
-                    <span className="text-white font-bold">+{selectedPoi.elevationMsl}m</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-[#050B14]">
-                    <span className="text-slate-500 block">FLOOD DEPTH:</span>
-                    <span className={floodDepth > 0 ? "text-[#EF4444] font-bold" : "text-[#10E7A2] font-bold"}>
-                      {floodDepth > 0 ? `+${floodDepth}m` : "DRY SAFE"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="text-[11px] font-rajdhani text-slate-300">
-                  <strong className="text-[#00F2FE]">RECOMMENDED ACTION: </strong>
-                  {selectedPoi.actionRecommendation}
-                </div>
-
-                {selectedPoi.details.nearestShelter && (
-                  <div className="text-[10px] font-jetbrains text-slate-400">
-                    Nearest Shelter: <span className="text-[#10E7A2]">{selectedPoi.details.nearestShelter}</span>
-                  </div>
-                )}
+          <div className="relative z-10 flex flex-col gap-2.5">
+            <div className="flex items-start justify-between gap-2 border-b border-[#1E3A5F] pb-2">
+              <div className="flex items-center gap-2">
+                {selectedPoi.type === "hospital" && <Building2 className="w-4 h-4 text-[#EF4444]" />}
+                {selectedPoi.type === "shelter" && <Shield className="w-4 h-4 text-[#10E7A2]" />}
+                {selectedPoi.type === "substation" && <Zap className="w-4 h-4 text-[#F59E0B]" />}
+                {selectedPoi.type === "highway" && <Route className="w-4 h-4 text-[#00F2FE]" />}
+                {(selectedPoi.type === "port" || selectedPoi.type === "cluster") && <Anchor className="w-4 h-4 text-[#93C5FD]" />}
+                <span className="text-xs font-rajdhani font-bold uppercase tracking-wider text-[#00F2FE] [text-shadow:0_2px_4px_rgba(0,0,0,0.95)]">
+                  {selectedPoi.name}
+                </span>
               </div>
-            );
-          })()}
+              <button
+                onClick={() => onSelectPoi(null)}
+                className="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Quick Metrics */}
+            {(() => {
+              const { floodDepth, status } = calculatePoiStatus(selectedPoi, effectiveSurge);
+              return (
+                <div className="flex flex-col gap-2.5 mt-1">
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-jetbrains">
+                    <div 
+                      className="p-2.5 rounded-xl bg-[#050B14]/85 backdrop-blur-md flex flex-col justify-between"
+                      style={{
+                        border: "1.5px solid rgba(0, 242, 254, 0.55)",
+                        boxShadow: "0 0 10px rgba(0,242,254,0.15), inset 0 1px 4px rgba(0,0,0,0.6)",
+                      }}
+                    >
+                      <span className="text-slate-400 font-rajdhani font-bold uppercase tracking-wider block">BASE MSL:</span>
+                      <span className="text-white font-extrabold text-xs sm:text-sm mt-0.5">+{selectedPoi.elevationMsl}m</span>
+                    </div>
+
+                    <div 
+                      className="p-2.5 rounded-xl bg-[#050B14]/85 backdrop-blur-md flex flex-col justify-between"
+                      style={{
+                        border: floodDepth > 0 ? "1.5px solid rgba(239, 68, 68, 0.7)" : "1.5px solid rgba(0, 242, 254, 0.55)",
+                        boxShadow: floodDepth > 0 
+                          ? "0 0 10px rgba(239,68,68,0.2), inset 0 1px 4px rgba(0,0,0,0.6)" 
+                          : "0 0 10px rgba(0,242,254,0.15), inset 0 1px 4px rgba(0,0,0,0.6)",
+                      }}
+                    >
+                      <span className="text-slate-400 font-rajdhani font-bold uppercase tracking-wider block">FLOOD DEPTH:</span>
+                      <span className={`font-extrabold text-xs sm:text-sm mt-0.5 ${floodDepth > 0 ? "text-[#EF4444]" : "text-[#10E7A2]"}`}>
+                        {floodDepth > 0 ? `+${floodDepth}m` : "DRY SAFE"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] font-rajdhani text-slate-300 [text-shadow:0_1px_2px_rgba(0,0,0,0.95)]">
+                    <strong className="text-[#00F2FE]">RECOMMENDED ACTION: </strong>
+                    {selectedPoi.actionRecommendation}
+                  </div>
+
+                  {selectedPoi.details.nearestShelter && (
+                    <div className="text-[10px] font-jetbrains text-slate-400 [text-shadow:0_1px_2px_rgba(0,0,0,0.95)]">
+                      Nearest Shelter: <span className="text-[#10E7A2]">{selectedPoi.details.nearestShelter}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 

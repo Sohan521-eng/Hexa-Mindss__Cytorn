@@ -8,7 +8,6 @@ import {
   FileCode, 
   FileSpreadsheet, 
   Archive, 
-  FlaskConical, 
   ArrowUpRight,
   CheckCircle2,
   Share2
@@ -301,153 +300,6 @@ function SimulateFloodingPillLink({ href, surgeMeters }: { href: string; surgeMe
               </div>
               <div className="text-[10px] text-[#050B14]/90 font-jetbrains">
                 View Real-Time Coastal Flood Impact Simulation
-              </div>
-            </div>
-          </div>
-          <ArrowUpRight className="w-4 h-4 text-[#050B14] shrink-0 ml-2" />
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-/* ─── Validate in PINNs Lab Pill Link (Matches styling & GSAP circular expansion effect in Deep Navy theme) ─── */
-function ValidatePinnsPillLink({ href }: { href: string }) {
-  const pillRef = useRef<HTMLAnchorElement | null>(null);
-  const circleRef = useRef<HTMLSpanElement | null>(null);
-  const tlRef = useRef<gsap.core.Timeline | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    const layout = () => {
-      if (!active) return;
-      const circle = circleRef.current;
-      const pill = pillRef.current;
-      if (!circle || !pill) return;
-
-      const w = pill.offsetWidth || pill.getBoundingClientRect().width;
-      const h = pill.offsetHeight || pill.getBoundingClientRect().height;
-      if (w === 0 || h === 0) return;
-
-      const R = ((w * w) / 4 + h * h) / (2 * h);
-      const D = Math.ceil(2 * R) + 2;
-      const delta = Math.ceil(R - Math.sqrt(Math.max(0, R * R - (w * w) / 4))) + 1;
-      const originY = D - delta;
-
-      circle.style.width = `${D}px`;
-      circle.style.height = `${D}px`;
-      circle.style.bottom = `-${delta}px`;
-
-      gsap.set(circle, {
-        xPercent: -50,
-        scale: 0,
-        transformOrigin: `50% ${originY}px`,
-      });
-
-      const label = pill.querySelector<HTMLElement>(".pill-label");
-      const hover = pill.querySelector<HTMLElement>(".pill-label-hover");
-
-      if (label) gsap.set(label, { y: 0 });
-      if (hover) gsap.set(hover, { y: h + 12, opacity: 0 });
-
-      tlRef.current?.kill();
-      const tl = gsap.timeline({ paused: true });
-
-      tl.to(circle, { scale: 1.5, xPercent: -50, duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
-
-      if (label) {
-        tl.to(label, { y: -(h + 8), duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
-      }
-
-      if (hover) {
-        gsap.set(hover, { y: Math.ceil(h + 100), opacity: 0 });
-        tl.to(hover, { y: 0, opacity: 1, duration: 1.6, ease: "power2.easeOut", overwrite: "auto" }, 0);
-      }
-
-      tlRef.current = tl;
-    };
-
-    layout();
-    const timer = setTimeout(layout, 250);
-
-    const onResize = () => layout();
-    window.addEventListener("resize", onResize);
-
-    if (typeof document !== "undefined" && document.fonts?.ready) {
-      document.fonts.ready.then(layout).catch(() => {});
-    }
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-      window.removeEventListener("resize", onResize);
-    };
-  }, []);
-
-  const handleEnter = () => {
-    tlRef.current?.tweenTo(tlRef.current.duration(), {
-      duration: 0.3,
-      ease: "power2.easeOut",
-      overwrite: "auto",
-    });
-  };
-
-  const handleLeave = () => {
-    tlRef.current?.tweenTo(0, {
-      duration: 0.25,
-      ease: "power2.easeOut",
-      overwrite: "auto",
-    });
-  };
-
-  return (
-    <Link
-      ref={pillRef}
-      href={href}
-      className="relative p-3.5 rounded-xl bg-[rgba(16,231,162,0.10)] border border-[rgba(16,231,162,0.65)] hover:border-[#10E7A2] shadow-[0_8px_24px_-2px_rgba(0,0,0,0.85),0_4px_12px_rgba(0,0,0,0.95),0_0_14px_rgba(16,231,162,0.2),inset_0_1px_0_rgba(180,255,225,0.4)] hover:shadow-[0_12px_32px_-2px_rgba(0,0,0,0.95),0_6px_18px_rgba(0,0,0,0.95),0_0_28px_rgba(16,231,162,0.85),inset_0_1px_0_rgba(255,255,255,0.6)] hover:scale-[1.02] backdrop-blur-[20px] transition-all duration-250 ease-out cursor-pointer overflow-hidden flex items-center justify-between group"
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-      title="Validate in PINNs Lab"
-    >
-      <span
-        ref={circleRef}
-        aria-hidden="true"
-        className="absolute left-1/2 bottom-0 rounded-full bg-[#10E7A2] z-[1] block pointer-events-none will-change-transform"
-      />
-      <div className="relative z-[2] w-full flex items-center justify-between">
-        {/* Default resting label */}
-        <div className="pill-label relative z-[2] w-full flex items-center justify-between will-change-transform">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#10E7A2]/15 border border-[#10E7A2]/30 flex items-center justify-center shrink-0">
-              <FlaskConical className="w-4 h-4 text-[#10E7A2]" />
-            </div>
-            <div>
-              <div className="text-xs font-rajdhani font-bold tracking-wider uppercase text-white">
-                Validate in PINNs Lab
-              </div>
-              <div className="text-[10px] text-[#10E7A2] font-jetbrains">
-                Run Real-Time AI &amp; Physics Model Validation
-              </div>
-            </div>
-          </div>
-          <ArrowUpRight className="w-4 h-4 text-[#10E7A2] shrink-0 ml-2" />
-        </div>
-
-        {/* Hover label (inverted dark on green circle) */}
-        <div
-          className="pill-label-hover absolute inset-0 z-[3] w-full flex items-center justify-between will-change-[transform,opacity]"
-          aria-hidden="true"
-        >
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#050B14]/15 border border-[#050B14]/30 flex items-center justify-center shrink-0">
-              <FlaskConical className="w-4 h-4 text-[#050B14]" />
-            </div>
-            <div>
-              <div className="text-xs font-rajdhani font-bold tracking-wider uppercase text-[#050B14]">
-                Validate in PINNs Lab
-              </div>
-              <div className="text-[10px] text-[#050B14]/90 font-jetbrains">
-                Run Real-Time AI &amp; Physics Model Validation
               </div>
             </div>
           </div>
@@ -812,8 +664,8 @@ Included Layers in GIS Archive:
         )}
       </div>
 
-      {/* SECTION 1: Inter-Page Pipeline Handoff CTAs (15, 16, 20) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* SECTION 1: Inter-Page Pipeline Handoff CTAs (15, 16) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* 15. "Broadcast to Alerts" CTA */}
         <BroadcastAlertsPillLink href={`/alerts?storm=${stormParam}&auto=true`} />
 
@@ -822,9 +674,6 @@ Included Layers in GIS Archive:
           href={`/digital-twin?surge=${surgeParam}`}
           surgeMeters={scenario.landfall.projectedSurgeMeters}
         />
-
-        {/* 20. "Test in Physics Lab" Link */}
-        <ValidatePinnsPillLink href={`/physics-lab?storm=${stormParam}`} />
       </div>
 
       {/* SECTION 2: Multi-Format Scientific GIS Exporter (17, 18, 19) */}

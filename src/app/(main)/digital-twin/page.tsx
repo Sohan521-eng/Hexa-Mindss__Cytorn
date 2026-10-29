@@ -37,7 +37,6 @@ import { SurgeLevelSlider } from "@/components/digital-twin/SurgeLevelSlider";
 import { DigitalTwinMap } from "@/components/digital-twin/DigitalTwinMap";
 import { SurgeTimeline } from "@/components/digital-twin/SurgeTimeline";
 import { DistrictImpactRail } from "@/components/digital-twin/DistrictImpactRail";
-import { ElevationTransectModal } from "@/components/digital-twin/ElevationTransectModal";
 import { EvacuationOrderModal } from "@/components/digital-twin/EvacuationOrderModal";
 
 function DigitalTwinContent() {
@@ -114,7 +113,6 @@ function DigitalTwinContent() {
 
   // Modals
   const [isEvacModalOpen, setIsEvacModalOpen] = useState<boolean>(false);
-  const [isTransectModalOpen, setIsTransectModalOpen] = useState<boolean>(false);
 
   // Sync storm updates
   const handleSelectStorm = (storm: StormContext) => {
@@ -178,7 +176,6 @@ function DigitalTwinContent() {
             visibleLayers={visibleLayers}
             selectedPoi={selectedPoi}
             onSelectPoi={setSelectedPoi}
-            onOpenTransectModal={() => setIsTransectModalOpen(true)}
           />
 
           {/* SURGE TIMELINE SCRUBBER (#surge-timeline-scrubber) */}
@@ -186,7 +183,7 @@ function DigitalTwinContent() {
             currentHour={currentHour}
             onHourChange={setCurrentHour}
             isPlaying={isPlaying}
-            onTogglePlay={() => setIsPlaying(!isPlaying)}
+            onTogglePlay={() => setIsPlaying((p) => !p)}
             playbackSpeed={playbackSpeed}
             onSpeedChange={setPlaybackSpeed}
             maxSurgeLevel={surgeLevel}
@@ -215,14 +212,6 @@ function DigitalTwinContent() {
         storm={selectedStorm}
         surgeLevel={surgeLevel}
       />
-
-      {/* Elevation Transect Cross-Section Modal */}
-      <ElevationTransectModal
-        isOpen={isTransectModalOpen}
-        onClose={() => setIsTransectModalOpen(false)}
-        currentSurgeMeters={surgeLevel}
-      />
-
     </div>
   );
 }

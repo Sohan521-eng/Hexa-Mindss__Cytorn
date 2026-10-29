@@ -122,9 +122,9 @@ function TwinStormSelectorPill({
         icon={<Flame style={{ width: 14, height: 14 }} />}
         label={
           <span className="flex items-center gap-1.5 sm:gap-2">
-            <span className="text-[10px] opacity-75 font-normal">STORM:</span>
+            <span className="text-[11px] font-bold tracking-wider">STORM:</span>
             <span>{selectedStorm.name} ({selectedStorm.code})</span>
-            <ChevronDown style={{ width: 12, height: 12, opacity: 0.7, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+            <ChevronDown style={{ width: 12, height: 12, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
           </span>
         }
         style={{
@@ -253,9 +253,9 @@ function TwinDistrictSelectorPill({
         icon={<Compass style={{ width: 14, height: 14 }} />}
         label={
           <span className="flex items-center gap-1.5 sm:gap-2">
-            <span className="text-[10px] opacity-75 font-normal">DISTRICT:</span>
+            <span className="text-[11px] font-bold tracking-wider">DISTRICT:</span>
             <span>{selectedDistrict.name}, {selectedDistrict.state}</span>
-            <ChevronDown style={{ width: 12, height: 12, opacity: 0.7, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+            <ChevronDown style={{ width: 12, height: 12, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
           </span>
         }
         style={{
@@ -385,9 +385,9 @@ function TwinSurgeSelectorPill({
         icon={<SlidersHorizontal style={{ width: 14, height: 14 }} />}
         label={
           <span className="flex items-center gap-1.5 sm:gap-2">
-            <span className="text-[10px] opacity-75 font-normal">SURGE:</span>
+            <span className="text-[11px] font-bold tracking-wider">SURGE:</span>
             <span>+{surgeLevel.toFixed(1)}m AAT {surgeLevel >= 4.0 ? "(Catastrophic)" : surgeLevel >= 3.0 ? "(Severe)" : ""}</span>
-            <ChevronDown style={{ width: 12, height: 12, opacity: 0.7, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+            <ChevronDown style={{ width: 12, height: 12, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
           </span>
         }
         style={{
