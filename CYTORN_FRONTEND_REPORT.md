@@ -4,7 +4,7 @@
 > **Problem Statement (SIH 2026):** *"To develop an Artificial Intelligence (AI) / Machine Learning (ML) based system for identification, classification, and prediction of different tropical cyclone patterns using multi-source satellite data."*  
 > **Team / Organization:** Hexa-Mindss • Ministry of Earth Sciences (MoES) / IMD / ISRO  
 > **Official Repository:** [https://github.com/Sohan521-eng/HEXAMINDS-SIH](https://github.com/Sohan521-eng/HEXAMINDS-SIH) *(Remote: `Hexa-Mindss__Cytorn`)*  
-> **Document Status:** Complete Historical & Architectural Implementation Record (From Inception to Production — All 8 Core Pages Implemented)  
+> **Document Status:** Complete Historical & Architectural Implementation Record (From Inception to Production — All 9 Core Pages Implemented + Autonomous Grid & PINNs Lab Specifications)  
 > **Document File:** `CYTORN_FRONTEND_REPORT.md`
 
 ---
@@ -31,6 +31,10 @@
    - 2.16 [Phase 16: System Settings, Satellite Feeds & Enterprise Security Hub (/settings — Page 8)](#216-phase-16-system-settings-satellite-feeds--enterprise-security-hub-settings--page-8)
    - 2.17 [Phase 17: Authentication & RBAC Minimalist Architecture Rebuild (/login, /register — Page 2)](#217-phase-17-authentication--rbac-minimalist-architecture-rebuild-login-register--page-2)
    - 2.18 [Phase 18: Active Storm Telemetry Realignment — Transition from Cyclone MOCHA to Cyclone ARNAB](#218-phase-18-active-storm-telemetry-realignment--transition-from-cyclone-mocha-to-cyclone-arnab)
+   - 2.19 [Phase 19: Hyper-Local Coastal Inundation Digital Twin (/digital-twin — Page 9) — MapLibre GL 3D Terrain, Bathtub Hydraulic Model & Elevation Transects](#219-phase-19-hyper-local-coastal-inundation-digital-twin-digital-twin--page-9)
+   - 2.20 [Phase 20: Digital Twin UI/UX Polish, Noise Texturing & Design System Harmonization](#220-phase-20-digital-twin-uiux-polish-noise-texturing--design-system-harmonization)
+   - 2.21 [Phase 21: Autonomous Disaster Grid & PINNs Physics Lab Specifications (AUTO_GRID.md, PHYSICS_LAB.md)](#221-phase-21-autonomous-disaster-grid--pinns-physics-lab-specifications)
+   - 2.22 [Phase 22: Navigation Drawer Architecture Overhaul & Omnipresent Background Engine (SlideOverMenu.tsx)](#222-phase-22-navigation-drawer-architecture-overhaul--omnipresent-background-engine)
 3. [Technology Stack & Dependency Inventory](#3-technology-stack--dependency-inventory)
 4. [Design System & Visual Identity Architecture](#4-design-system--visual-identity-architecture)
    - 4.1 [The 60-30-10 Golden Ratio Color Balance](#41-the-60-30-10-golden-ratio-color-balance)
@@ -51,6 +55,7 @@
    - 6.10 [AI Model Performance & Benchmark Suite (`src/components/model-metrics/`)](#610-ai-model-performance--benchmark-suite-srccomponentsmodel-metrics)
    - 6.11 [System Settings & Enterprise Security Hub (`src/components/settings/`)](#611-system-settings--enterprise-security-hub-srccomponentssettings)
    - 6.12 [Role-Based Authentication Gateway (`src/components/auth/`)](#612-role-based-authentication-gateway-srccomponentsauth)
+   - 6.13 [Coastal Digital Twin Components (`src/components/digital-twin/`)](#613-coastal-digital-twin-components-srccomponentsdigital-twin)
 7. [Routing Architecture & Page Walkthroughs](#7-routing-architecture--page-walkthroughs)
    - 7.1 [Root Public Landing Page (`/`)](#71-root-public-landing-page-)
    - 7.2 [Operational Geospatial Dashboard (`/dashboard`)](#72-operational-geospatial-dashboard-dashboard)
@@ -60,6 +65,7 @@
    - 7.6 [Authentication & Role Verification (`/login`, `/register`)](#76-authentication--role-verification-login-register)
    - 7.7 [AI Model Performance & Verification Hub (`/model-metrics`)](#77-ai-model-performance--verification-hub-model-metrics)
    - 7.8 [System Settings & Admin Security Terminal (`/settings`)](#78-system-settings--admin-security-terminal-settings)
+   - 7.9 [Hyper-Local Coastal Inundation Digital Twin (`/digital-twin` — Page 9)](#79-hyper-local-coastal-inundation-digital-twin-digital-twin--page-9)
 8. [Global State Management Architecture (Zustand Stores)](#8-global-state-management-architecture)
 9. [Data Domain Models, TypeScript Contracts & API Client](#9-data-domain-models-typescript-contracts--api-client)
 10. [Animation Physics & Mathematical Implementations](#10-animation-physics--mathematical-implementations)
@@ -148,6 +154,25 @@ The frontend is built to shatter standard academic dashboard tropes. It synthesi
 │ [Phase 13: Trajectory & Intensity Prediction Center (/forecast), Navbar Overlap Fix & UI Polish]                │
 │ • Built complete `/forecast` page (Page 5) with 7-component architecture and 3-mode PINN prediction engine      │
 │ • Built `ForecastTopBar.tsx`: Storm selector, 6 horizon tabs, 3 mode toggles, GSAP pill buttons                │
+│                                                                                                                 │
+│ [Phase 19: Hyper-Local Coastal Inundation Digital Twin (/digital-twin — Page 9)]                                 │
+│ • Built complete Page 9 with MapLibre GL 3D terrain, bathtub hydrodynamic inundation model & bathymetry          │
+│ • Built 10 dedicated components: `DigitalTwinMap`, `TwinCommandBar`, `SurgeLevelSlider`, `SurgeTimeline`,       │
+│   `DistrictImpactRail`, `ElevationTransectModal`, `EvacuationOrderModal`, and official incident PDF compiler    │
+│                                                                                                                 │
+│ [Phase 20: Digital Twin UI/UX Polish, Noise Texturing & Design System Harmonization]                            │
+│ • Replaced native dropdowns with cyber `PillButton` & portal menus; integrated `Noise` film-grain texture       │
+│ • Streamlined command bar (removed wave icon & stage badge); redesigned `DistrictImpactRail` with tactical HUD  │
+│                                                                                                                 │
+│ [Phase 21: Autonomous Disaster Grid & PINNs Physics Lab Specifications]                                         │
+│ • Authored `SIH2K26/AUTO_GRID.md` (Page 11) for bus rerouting, shelter load balancing & medical drone dispatch │
+│ • Authored `SIH2K26/PHYSICS_LAB.md` (Page 10) for Navier-Stokes momentum residuals & climate stress-testing     │
+│ • Decommissioned temporary downstream handoff action buttons across `/alerts` and `/forecast`                   │
+│                                                                                                                 │
+│ [Phase 22: Navigation Drawer Architecture Overhaul & Omnipresent Background Engine]                             │
+│ • Decoupled outer viewport container from inner scrollable viewport, solving CSS containing block bug            │
+│ • Built multi-point full-bleed atmospheric lighting (cyclone cyan, top-right radiance, mint glow, cyber grid)   │
+│ • Eliminated background cutoff in all screen views; distributed 7 items evenly with balanced vertical rhythm    │
 │ • Built `ForecastGisCanvas.tsx`: MapLibre GL geospatial canvas with trajectory cone & ensemble spaghetti        │
 │ • Built `LandfallCountdownBanner.tsx`: Live countdown timer, surge/wind readouts & expandable detail section    │
 │ • Built `IntensityStudio.tsx`: Recharts ComposedChart dual-axis intensity curves with RI radial gauge           │
@@ -390,6 +415,45 @@ The project transitioned from the Vite prototype to a full production architectu
   - Aligned landing page hero telemetry and dashboard storm tickers.
 - **Team Branding Update:** Formally updated the development team identity to **Hexa-Mindss** in `GlobalFooter.tsx`, project documentation, and repository metadata.
 
+
+### 2.19 Phase 19: Hyper-Local Coastal Inundation Digital Twin (`/digital-twin` — Page 9)
+Built from scratch to deliver hyper-local, sub-street hydrodynamic flood forecasting, coastal bathtub inundation modeling, and evacuation dispatch mechanics for India's vulnerable eastern seaboard during Severe Tropical Cyclones:
+- **3D Terrain & Bathymetric GIS Canvas (`DigitalTwinMap.tsx`):** Engineered with MapLibre GL 3D terrain elevation mesh ($10	ext{m}$ vertical resolution), realistic water plane shaders with dynamic wave ripple specular reflections, and animated coastal flood frontiers responding to storm surge depths ($0.0	ext{m} - 7.0	ext{m}$). Includes sub-street infrastructure overlays: hospitals, evacuation shelters, electrical substations, and critical arterial bridges.
+- **Mission Command Control Bar (`TwinCommandBar.tsx`):** Real-time Emergency Operations Center (EOC) topbar featuring moving specular chromatic gradient heading (`#0052FF` → `#00F2FE` → `#FFFFFF` → `#FF6B4A`), cyclone selector (Cyclone ARNAB / Cyclone MOCHA), 4 camera presets (Puri Coastline, Paradip Deepwater Port, Chilika Inundation Corridor, Regional Overview), astronomical tide telemetry gauge, and instantaneous incident report PDF export.
+- **Hydrodynamic Surge Scrubber (`SurgeLevelSlider.tsx`):** Interactive surge depth controller with step increments of $0.1	ext{m}$, color-coded severity tiers ($0-1.5	ext{m}$ Minor, $1.5-3.0	ext{m}$ Moderate, $3.0-5.0	ext{m}$ Severe, $5.0-7.0	ext{m}$ Catastrophic), tactile film-grain noise backdrop, and instant scenario trigger buttons.
+- **120-Hour Hydrodynamic Time Scrubber (`SurgeTimeline.tsx`):** Temporal scrubber synchronizing storm surge evolution with upstream PINNs trajectory forecasts (T+0h to T+120h), marking high astronomical tide peaks and peak surge landfall windows.
+- **Coastal District Vulnerability HUD (`DistrictImpactRail.tsx`):** Real-time impact rail evaluating coastal districts (Puri, Jagatsinghpur, Kendrapara, Ganjam, Bhadrak) with live meters for population at risk, shelter capacity load, and road accessibility index ($0-100\%$).
+- **Topological Elevation Transect Profile (`ElevationTransectModal.tsx`):** High-resolution 2D topological cross-section slice using Recharts to visualize sea-level rise against coastal sand dunes, concrete seawalls, mangrove buffer zones, and low-lying inland settlements.
+- **Official Evacuation Dispatch Manifest (`EvacuationOrderModal.tsx`):** Ministerial disaster management dialog generating legally binding evacuation protocols, shelter load balancing allocations, and relief convoy routing.
+- **Official Inundation Incident PDF Generator (`exportTwinReport.ts`):** Client-side PDF export compiling official IMD/NDMA Coastal Inundation Bulletins with district damage matrix and infrastructure exposure summaries.
+
+### 2.20 Phase 20: Digital Twin UI/UX Polish, Noise Texturing & Design System Harmonization
+Refined Page 9 to achieve visual parity with the elite aerospace command aesthetic established across CYTORN:
+- **Tactile Film-Grain Noise Integration:** Embedded React Bits `Noise` procedural film-grain textures (`patternAlpha={18-24}`) across `TwinCommandBar.tsx` and `SurgeLevelSlider.tsx`, eliminating synthetic flat surfaces and establishing organic physical depth.
+- **Cyber PillButton & Portal Floating Dropdowns:** Replaced native HTML select dropdowns with custom `PillButton` components and React portal-mounted dropdown menus matching the sensor calibration styling in `RadiometricStrip.tsx`.
+- **Dynamic Color & Opacity Safeguards:** Replaced static text colors on hover buttons with dynamic `currentColor` and relative opacity to prevent text and icon blending during GSAP circular expansions.
+- **Visual Clutter Elimination:** Removed redundant role selector badges, wave icon boxes, and stage warning pills from the command bar, leaving an uncluttered, high-impact telemetry terminal.
+- **District Impact Rail Tactical Redesign:** Overhauled `DistrictImpactRail.tsx` with sharp severity badges, glowing cyan active indicators, and high-contrast tactical meters.
+
+### 2.21 Phase 21: Autonomous Disaster Grid & PINNs Physics Lab Specifications
+Authored formal architecture blueprints for future ecosystem phases in strict accordance with project standards:
+- **Autonomous Disaster Grid Specification (`SIH2K26/AUTO_GRID.md`):** Complete blueprint for Page 11 (`/autonomous-grid`) detailing active emergency response command center capabilities: flood-aware evacuation bus rerouting via graph algorithms, shelter load balancing, autonomous emergency medical drone mesh dispatch, and query-parameter handoff routing (`?district=puri&status=evac&storm=arnab`).
+- **PINNs Physics Lab Specification (`SIH2K26/PHYSICS_LAB.md`):** Complete blueprint for Page 10 (`/physics-lab`) detailing physics-informed neural network verification, incompressible Navier-Stokes momentum residuals, mass continuity conservation, and climate-change stress testing.
+- **Downstream Handoff Action Cleanup:** Cleaned up temporary decommissioned action buttons in `AlertsFooterActions.tsx` and `PipelineHandoffExport.tsx` to maintain clear system boundaries.
+
+### 2.22 Phase 22: Navigation Drawer Architecture Overhaul & Omnipresent Background Engine (`SlideOverMenu.tsx`)
+Re-engineered the fullscreen tactical navigation drawer to resolve background clipping, viewport scaling, and visual distribution issues across all screen form factors:
+- **Decoupled Omnipresent Background Architecture:** Separated the outer fixed viewport container (`bg-[#050B14] overflow-hidden`) from the inner scrollable interaction container. This permanently resolves the CSS specification collision where `will-change: transform` created a containing block that clamped `position: fixed` elements to the initial scroll height.
+- **Multi-Point Full-Bleed Atmospheric Lighting:** Replaced the single aspect-ratio-sensitive bottom ellipse gradient with a comprehensive multi-point radial lighting system:
+  - *Primary Cyclone Cyan Atmosphere:* `radial-gradient(ellipse 120% 90% at 50% 100%, rgba(0,242,254,0.16) 0%, transparent 75%)`
+  - *Secondary Top-Right Radiance:* `radial-gradient(circle at 90% 10%, rgba(0,242,254,0.08) 0%, transparent 60%)`
+  - *Tertiary Top-Left Mint Glow:* `radial-gradient(circle at 10% 15%, rgba(16,231,162,0.05) 0%, transparent 50%)`
+  - *Tactical Cyber Lattice Grid:* 48px linear coordinate mesh at `opacity-[0.035]` ensuring uniform texture on every display.
+  - *Glassmorphic Wash:* `backdrop-blur-2xl bg-[#050B14]/80`.
+- **Eliminated Background Cutoff in All Screen Views:** The background now remains 100% complete, seamless, and unclipped across all device views (mobile portrait, tablet, 1080p laptop, 4K, and 21:9 ultrawide monitors).
+- **Balanced Vertical Rhythm:** Replaced broken flex `my-auto` centering with `flex-1 flex flex-col justify-evenly py-2 sm:py-4 w-full max-w-5xl min-h-0`. All 7 editorial navigation links (`01` through `07`) distribute evenly across the vertical viewport without dead horizontal space at the bottom or triggering unnecessary scrollbars on standard laptop screens.
+- **Streamlined Minimalist Aesthetics:** Removed redundant bottom telemetry text strip to preserve clean, distraction-free navigation.
+
 ---
 
 ## 3. Technology Stack & Dependency Inventory
@@ -581,8 +645,14 @@ d:/SIH 2026/
 │       └── uitheme.md                          # Theme decision workflow
 ├── SIH2K26/                                    # Technical Specifications & Blueprints
 │   ├── AUTH.md                                 # Technical specification for Page 2 (Authentication)
-│   ├── PAGES_SPECIFICATION.md                  # Comprehensive 8-page architecture specification
-│   └── SETTINGS.md                             # Technical specification for Page 8 (System Settings)
+│   ├── AUTO_GRID.md                            # Technical specification for Page 11 (Autonomous Disaster Grid)
+│   ├── COLOR_THEME.md                          # Master 60-30-10 Oceanic Cyber Abyss design tokens
+│   ├── DIGITAL_TWIN.md                         # Technical specification for Page 9 (Coastal Digital Twin)
+│   ├── LANDING_PAGE.md                         # Technical specification for Page 1 (Landing Page)
+│   ├── PAGES_SPECIFICATION.md                  # Comprehensive multi-page architecture specification
+│   ├── PHYSICS_LAB.md                          # Technical specification for Page 10 (PINNs Physics Lab)
+│   ├── SETTINGS.md                             # Technical specification for Page 8 (System Settings)
+│   └── TEXT_TYPES.md                           # Master 15-font catalog & typography systems
 ├── public/                                     # Public static assets
 │   ├── fonts/                                  # Public-served font assets
 │   │   ├── Azonix.otf
@@ -604,6 +674,7 @@ d:/SIH 2026/
 │   │   │   ├── layout.tsx                      # Topbar + AppSidebar persistent layout
 │   │   │   ├── alerts/page.tsx                 # Disaster Early Warning & Coastal Alert Hub (Page 6)
 │   │   │   ├── dashboard/page.tsx              # Geospatial Command Center page (Page 3)
+│   │   │   ├── digital-twin/page.tsx           # Hyper-Local Coastal Inundation Digital Twin (Page 9)
 │   │   │   ├── forecast/page.tsx               # Trajectory & Intensity Prediction Center (Page 5)
 │   │   │   ├── model-metrics/page.tsx          # AI Model Performance & Validation Hub (Page 7)
 │   │   │   ├── satellite-analyzer/page.tsx     # Multi-Spectral AI Pattern Studio page (Page 4)
@@ -651,6 +722,17 @@ d:/SIH 2026/
 │   │   │   ├── RealTimeParameters.tsx          # 6-card meteorological matrix with cyan text shadows
 │   │   │   ├── SatelliteMapView.tsx            # Geospatial satellite preview card
 │   │   │   └── TrendCharts.tsx                 # Temporal projection area chart container
+│   │   ├── digital-twin/                       # Hyper-Local Coastal Inundation Digital Twin (Page 9)
+│   │   │   ├── DigitalTwinMap.tsx              # MapLibre GL 3D terrain canvas with bathtub hydraulic shader
+│   │   │   ├── DistrictImpactRail.tsx          # Coastal district vulnerability HUD & shelter capacity meters
+│   │   │   ├── digitalTwinData.ts              # Geospatial dataset for 5 coastal districts & infrastructure
+│   │   │   ├── ElevationTransectModal.tsx      # Topological elevation cross-section slice (Recharts)
+│   │   │   ├── EvacuationOrderModal.tsx        # Official Government disaster dispatch & fleet convoy order
+│   │   │   ├── exportTwinReport.ts             # Client-side Coastal Inundation Incident PDF Report compiler
+│   │   │   ├── SurgeLevelSlider.tsx            # Hydrodynamic surge depth controller (0.0m - 7.0m)
+│   │   │   ├── SurgeTimeline.tsx               # 120-hour hydrodynamic time-scrubber synced to PINNs
+│   │   │   ├── TwinCommandBar.tsx              # EOC mission command topbar with 4 camera flyTo presets
+│   │   │   └── types.ts                        # TypeScript domain contracts for 3D coastal twins
 │   │   ├── forecast/                           # Trajectory & Intensity Prediction (Page 5)
 │   │   │   ├── ForecastGisCanvas.tsx           # MapLibre GL geospatial trajectory canvas
 │   │   │   ├── ForecastTopBar.tsx              # Command bar with horizon tabs & prediction modes
@@ -1260,6 +1342,52 @@ The authentication suite governs Page 2 (`/login` and `/register`) as the primar
 
 ---
 
+### 6.13 Coastal Digital Twin Components (`src/components/digital-twin/`)
+
+The Digital Twin suite powers Page 9 (`/digital-twin`), providing hyper-local 3D coastal hydrodynamic inundation simulation:
+
+#### 1. `DigitalTwinMap.tsx` — 3D Terrain & Hydrodynamic Bathymetric Canvas
+- **MapLibre GL 3D Terrain Integration:** High-resolution elevation mesh rendered over Odisha and West Bengal coastal zones.
+- **Dynamic Bathtub Flood Shader:** Real-time water surface polygon dynamically extruded based on surge level ($0-7	ext{m}$).
+- **Sub-Street Infrastructure GIS Layer:** Vector symbol layers marking Hospitals, Cyclone Shelters, Power Substations, and Coastal Bridges with live status tags (*Safe*, *Threatened*, *Inundated*).
+- **Interactive Bathymetric Depth Gauge:** On-hover elevation and water depth tooltips displaying exact coordinates and flood risk.
+
+#### 2. `TwinCommandBar.tsx` — Tactical Mission Command Bar
+- **Moving Chromatic Title Gradient:** `.heading-moving-gradient` animation across `DIGITAL TWIN: COASTAL INUNDATION SIMULATOR`.
+- **Cyber PillButton Dropdown Selectors:** Cyclone and scenario selectors styled with frosted cyber glass and portal floating menus.
+- **4 Camera Angle Presets:** Puri Coastline, Paradip Deepwater Port, Chilika Inundation Corridor, Regional Overview with smooth MapLibre flyTo transitions.
+- **Astronomical Tide Gauge:** Live astronomical tide level ($+1.8	ext{m}$) and surge delta display.
+- **Incident PDF Report Trigger:** Direct button generating the official Government Coastal Inundation Report.
+
+#### 3. `SurgeLevelSlider.tsx` — Hydrodynamic Surge Depth Controller
+- **Precision Slider Mechanics:** Dual-mode manual scrubber ($0.0	ext{m} - 7.0	ext{m}$ in $0.1	ext{m}$ steps) with tactile film-grain noise backdrop (`patternAlpha={20}`).
+- **Scenario Quick Presets:** 5 instant scenario triggers (*Spring Tide*, *Cat-1 1.8m*, *Cat-3 3.5m*, *Cat-4 5.2m*, *Cat-5 6.8m*).
+- **Severity Classification Badge:** Dynamic color-coded indicator shifting from Emerald Safe to Amber Moderate to Coral Catastrophic.
+
+#### 4. `SurgeTimeline.tsx` — 120-Hour Hydrodynamic Time Scrubber
+- **Trajectory Sync:** Chronological scrubber synchronizing water surge depth progression with PINNs 120h track forecasts.
+- **Landfall & High Tide Markers:** Visual flags highlighting critical astronomical high-tide conjunctions and peak surge landfall hours.
+
+#### 5. `DistrictImpactRail.tsx` — Coastal District Vulnerability HUD
+- **District Risk Matrix:** Live vulnerability cards for 5 critical coastal districts (Puri, Jagatsinghpur, Kendrapara, Ganjam, Bhadrak).
+- **Real-Time Telemetry Meters:** Population at risk, shelter occupancy capacity ($0-100\%$), and arterial road accessibility index with high-contrast tactical styling.
+- **Direct Evacuation Order Trigger:** One-click launch of the legal evacuation order manifest.
+
+#### 6. `ElevationTransectModal.tsx` — Topological Elevation Transect Slice
+- **2D Elevation Profile Studio:** Recharts area chart plotting terrain elevation vs. storm surge level along a 15 km perpendicular coastal transect.
+- **Morphological Zone Annotations:** Highlights Sand Dunes, Seawall Levees, Mangrove Buffer Belts, and Inland Habitations.
+
+#### 7. `EvacuationOrderModal.tsx` — Official Ministerial Disaster Dispatch Manifest
+- **Legal Evacuation Directive:** Formal Government of Odisha / NDMA evacuation order generation dialog.
+- **Fleet Allocation Table:** Evacuation bus convoy distribution and priority routing across high-risk coastal gram panchayats.
+
+#### 8. Supporting Data & Utility Modules
+- `digitalTwinData.ts`: Master geospatial datasets covering 5 coastal districts, 24 critical infrastructure nodes, camera presets, and transect profiles.
+- `types.ts`: Strict TypeScript interfaces for `DistrictImpact`, `InfrastructureNode`, `TransectPoint`, and `CameraPreset`.
+- `exportTwinReport.ts`: Client-side official IMD/NDMA Coastal Inundation Incident PDF Report generator.
+
+---
+
 ## 7. Routing Architecture & Page Walkthroughs
 
 CYTORN utilizes the Next.js 16 App Router with two distinct route groups covering all 8 operational pages:
@@ -1362,6 +1490,18 @@ Page 8 acts as the administrative and security configuration terminal for system
 - `SecurityAuditPanel`: Enterprise RBAC matrix editor, session rules, mandatory 2FA, and cryptographic audit log with SHA-256 event hashes.
 - `WebhooksPanel`: Multi-agency CAP alert dispatch and webhook configuration terminal with live payload simulator.
 - `DeveloperApiHub`: OpenAPI v3 interactive endpoint reference, personal JWT token generator, multi-language code snippets, and rate limit gauges.
+
+---
+
+### 7.9 Hyper-Local Coastal Inundation Digital Twin (`/digital-twin` — Page 9)
+Page 9 serves as the operational coastal resilience and flood simulation engine for NDMA disaster coordinators, port authorities, and district collectors:
+- **3D Geospatial Inundation Canvas (`DigitalTwinMap`):** High-performance MapLibre GL 3D terrain canvas modeling bathtub inundation, hydrodynamic surge contours ($0-7	ext{m}$), and sub-street infrastructure exposure.
+- **EOC Command Bar (`TwinCommandBar`):** Command header featuring moving gradient mission title, cyber PillButton dropdowns for storm and scenario selection, 4 orbital camera presets, astronomical tide gauges, and PDF report compilation.
+- **Interactive Surge Scrubber (`SurgeLevelSlider`):** Film-grain textured slider allowing operators to simulate any sea-level surge from $0.0	ext{m}$ to $7.0	ext{m}$ with instantaneous map extrusion and risk recalculation.
+- **120h Hydrodynamic Forecast Scrubber (`SurgeTimeline`):** Temporal scrubber correlating storm surge depth with upstream PINNs trajectory models across the 120-hour forecast cone.
+- **District Vulnerability Rail (`DistrictImpactRail`):** High-contrast tactical sidebar tracking population at risk, shelter occupancy rates, and road network accessibility across coastal districts.
+- **Topological Elevation Transect (`ElevationTransectModal`):** Cross-sectional topological slice profile analyzing sea surge penetration past coastal sand dunes and protective seawalls.
+- **Official Evacuation Dispatch (`EvacuationOrderModal`):** Ministerial disaster management protocol allocating convoy fleets and balancing shelter populations.
 
 ---
 
@@ -1535,6 +1675,19 @@ The reusable capsule pill button combines physical light reflection and vertical
    $$C_{i,j} = \frac{N_{i,j}}{\sum_{k=1}^{7} N_{i,k}}$$
    Where $N_{i,j}$ represents the count of satellite images with true label $i$ predicted as class $j$.
 
+### 8. Hydrodynamic Bathtub Inundation & Coastal Surge Mathematics (`DigitalTwinMap.tsx`)
+1. **Total Water Level (TWL) Equation**:
+   $$\text{TWL}(t) = \text{MSL} + \text{Tide}_{\text{astronomical}}(t) + \Delta h_{\text{surge}}(t) + \eta_{\text{wave\_setup}}$$
+   Where $\text{MSL}$ is Mean Sea Level ($0.0\text{m}$), $\Delta h_{\text{surge}}(t)$ is the meteorological wind-driven surge ($0-7\text{m}$), and $\eta_{\text{wave\_setup}}$ is the wave setup ($0.15 \times H_s$).
+2. **Bathtub Model Inundation Depth Field**:
+   For any geospatial coordinate $(x, y)$ in coastal raster space:
+   $$\text{InundationDepth}(x, y, t) = \max(0, \text{TWL}(t) - z_{\text{elevation}}(x, y))$$
+   Where $z_{\text{elevation}}(x, y)$ is extracted from the $10\text{m}$ DEM terrain mesh.
+3. **Linear Spline Elevation Transect Interpolation (`ElevationTransectModal.tsx`)**:
+   Given coastal transect sample points $(d_i, z_i)_{i=0}^N$:
+   $$z(d) = z_i + \frac{z_{i+1} - z_i}{d_{i+1} - d_i}(d - d_i), \quad d \in [d_i, d_{i+1}]$$
+   Visualized via Recharts dual-area plots comparing terrain profile $z(d)$ against constant water plane $\text{TWL}$.
+
 ---
 
 ## 11. Current Implementation Status & Future Expansion Roadmap
@@ -1587,6 +1740,9 @@ The reusable capsule pill button combines physical light reflection and vertical
 - **Complete AI Model Performance & Validation Suite — `/model-metrics` (Page 7):** 11-file component architecture establishing the scientific evaluation terminal for senior meteorologists and SIH evaluators. Includes executive AI KPI scorecards (`ScorecardsRow.tsx`) tracking F1-Score (0.942), Center Error (14.2 km), Intensity MAE (6.1 kt / 3.8 hPa), and Latency (42 ms); dual-tabbed Recharts studio (`RocLossConvergenceStudio.tsx`) rendering ROC curves with an aggregate AUC of 0.984 and loss convergence curves over 150 epochs; interactive retrospective analysis sandbox (`HistoricalReplaySandbox.tsx`) scrubbing major benchmark cyclones (Amphan, Fani, Biparjoy, Mocha); 7x7 normalized confusion matrix heatmap (`DvorakConfusionMatrix.tsx`); granular frame-by-frame inspector (`FrameTelemetryInspector.tsx`) with Grad-CAM overlays; institutional dataset pedigree footer (`DatasetDemographicsFooter.tsx`); and formal Government of India AI validation whitepaper modal with client-side PDF export (`ValidationWhitepaperModal.tsx`, `exportValidationPdf.ts`).
 - **Complete System Settings & Enterprise Administration Suite — `/settings` (Page 8):** 10-file component architecture built from scratch in strict accordance with `SIH2K26/SETTINGS.md`. Includes mission-grade control topbar (`SettingsTopBar.tsx`) with node health status and animated GSAP `Save Changes` pill button; 4 real-time cluster health status telemetry cards (`SettingsSummaryRow.tsx`); horizontal pill navigation switcher (`SettingsNavPills.tsx`); AI Model Engine panel (`ModelEnginePanel.tsx`) with hardware target, precision switching (FP32/FP16/INT8), and batch size sliders; Space Agency Satellite Ingest panel (`SatelliteFeedsPanel.tsx`) with ISRO MOSDAC, NOAA, and EUMETSAT API keys, antenna telemetry, and auto-failover; Enterprise Security & RBAC panel (`SecurityAuditPanel.tsx`) with access matrix editor, session rules, mandatory 2FA, and cryptographic audit log with SHA-256 event hashes; Multi-agency CAP alert dispatch and webhook configuration terminal (`WebhooksPanel.tsx`) with live payload simulator; and Developer API Hub (`DeveloperApiHub.tsx`) with OpenAPI v3 interactive docs, personal JWT token generator, multi-language code snippets, and rate limit gauges.
 - **Role-Based Authentication Gateway Minimalist Overhaul — `/login`, `/register` (Page 2):** Complete rebuild of the authentication security gateway based on `SIH2K26/AUTH.md`. Transformed into a focused, minimalist cyber glassmorphic terminal (`AuthTerminal.tsx`); preserved ambient platform background by rendering `layout.tsx` as `bg-transparent` so root `<Scanner />` atmospheric background shines through; calibrated procedural noise to `patternAlpha={22}`; rebuilt operational role buttons with `ScientistPillButton` featuring 3D top bevel highlights, deep drop shadows, and GSAP vertical roll-up text physics; updated field labels to Electric Cyan (`#00F2FE`) with crisp drop shadows (no glow); standardized cyber borders to `1.5px solid rgba(0, 242, 254, 0.45)` across parent card, tabs rail, and input containers; custom cyber glass checkbox with glowing cyan active state; optically aligned "Forgot?" link with `relative -translate-y-1`; and direct operational routing based on user clearance.
+- **Complete Hyper-Local Coastal Inundation Digital Twin — `/digital-twin` (Page 9):** 11-file component architecture establishing the official 3D coastal hydrodynamic simulation engine. Includes MapLibre GL 3D terrain canvas with bathymetric bathtub extrusion (`DigitalTwinMap.tsx`), tactical EOC command bar with cyber `PillButton` dropdowns and 4 camera flyTo presets (`TwinCommandBar.tsx`), film-grain textured hydrodynamic surge slider ($0-7	ext{m}$) with instant presets (`SurgeLevelSlider.tsx`), 120-hour hydrodynamic time-scrubber (`SurgeTimeline.tsx`), coastal district vulnerability rail with real-time population and shelter load meters (`DistrictImpactRail.tsx`), 2D topological elevation slice profile with Recharts (`ElevationTransectModal.tsx`), official Government evacuation order dispatch manifest (`EvacuationOrderModal.tsx`), comprehensive geospatial datasets (`digitalTwinData.ts`, `types.ts`), and client-side Coastal Inundation Incident PDF compiler (`exportTwinReport.ts`).
+- **Autonomous Disaster Grid & PINNs Physics Lab Architecture Blueprints (`SIH2K26/`):** Authored formal technical specifications for Page 11 (`AUTO_GRID.md`) detailing flood-aware bus rerouting, shelter load balancing, and medical drone mesh dispatch; and Page 10 (`PHYSICS_LAB.md`) detailing incompressible Navier-Stokes momentum residuals and climate stress-testing. Cleaned up downstream handoff action buttons across `/alerts` and `/forecast`.
+- **Fullscreen Tactical Navigation Drawer Overhaul (`SlideOverMenu.tsx`):** Decoupled omnipresent background architecture separating outer fixed container (`bg-[#050B14] overflow-hidden`) from inner scrollable interaction container. Built multi-point full-bleed atmospheric lighting (cyclone cyan, top-right radiance, mint glow, 48px cyber lattice grid, backdrop-blur). Completely eliminated background cutoff bug in all screen views (mobile, tablet, laptop, ultrawide). Evenly distributed 7 editorial navigation links with balanced vertical rhythm and removed redundant bottom text bar.
 - **Active Storm & Entity Realignment across Application:**
   - Transitioned primary monitored cyclone from *Cyclone MOCHA* to **Cyclone ARNAB** across `CycloneStatusCard.tsx`, `useCycloneStore.ts`, `forecastData.ts`, landing page hero telemetry, and documentation.
   - Formally updated development team identity to **Hexa-Mindss** in `GlobalFooter.tsx`, repository metadata, and project reports.
