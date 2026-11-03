@@ -9,7 +9,10 @@ Role: Predicts multi-horizon forward track, bounds kinematics to prevent
 import os
 import json
 import math
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 from datetime import datetime, timezone
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
