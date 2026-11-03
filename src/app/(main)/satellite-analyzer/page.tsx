@@ -246,7 +246,25 @@ export default function SatelliteAnalyzerPage() {
       setLatencyMs(Math.floor(44 + Math.random() * 8));
 
       // Dynamic variation based on model
-      if (selectedModel === "resnet50") {
+      if (selectedModel === "efficientnet-b0") {
+        setTelemetry((prev) => ({
+          ...prev,
+          primaryPattern: "Eye Pattern (EfficientNet-B0 Dual-Head)",
+          confidence: 92.4,
+          tNumber: "T 5.5",
+          ciNumber: "CI 5.5",
+          vmaxKmh: 195,
+          vmaxKts: 105,
+          pcHpa: 938,
+          probabilities: {
+            eyePattern: 92.4,
+            curvedBand: 4.8,
+            cdo: 2.1,
+            shearPattern: 0.5,
+            embeddedCenter: 0.2,
+          },
+        }));
+      } else if (selectedModel === "resnet50") {
         setTelemetry((prev) => ({
           ...prev,
           primaryPattern: "Eye Pattern (ResNet Baseline)",

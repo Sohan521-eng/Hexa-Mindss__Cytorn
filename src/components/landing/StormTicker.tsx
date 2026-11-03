@@ -5,8 +5,26 @@ import Link from "next/link";
 import { Radio, ArrowUpRight, Satellite } from "lucide-react";
 import { LogoLoop, LogoItem } from "@/components/ui/LogoLoop";
 
+interface TickerItem {
+  id: string;
+  isBadge?: boolean;
+  text?: string;
+  color?: string;
+  badge?: string;
+  name?: string;
+  basin?: string;
+  category?: string;
+  wind?: string;
+  pressure?: string;
+  coords?: string;
+  href?: string;
+  highlight?: boolean;
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+
 export function StormTicker() {
-  const tickerData = [
+  const tickerData: TickerItem[] = [
     {
       id: "count",
       isBadge: true,
@@ -67,8 +85,42 @@ export function StormTicker() {
     },
   ];
 
+  const [tickerItems, setTickerItems] = React.useState<TickerItem[]>(tickerData);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchLiveTicker = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/storms/active`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data?.current_state) {
+            setTickerItems((prev) =>
+              prev.map((item) =>
+                item.id === "arnab"
+                  ? {
+                      ...item,
+                      wind: `${Math.round(data.current_state.wind_kmh)} km/h`,
+                      pressure: `${data.current_state.pressure_hpa} hPa`,
+                      coords: `${data.current_state.lat}°N, ${data.current_state.lon}°E`,
+                    }
+                  : item
+              )
+            );
+          }
+        }
+      } catch {
+        // High-fidelity baseline retained
+      }
+    };
+    fetchLiveTicker();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const logoItems: LogoItem[] = useMemo(() => {
-    return tickerData.map((item) => ({
+    return tickerItems.map((item) => ({
       title: item.name || item.text,
       node: item.isBadge ? (
         <div 
@@ -110,7 +162,7 @@ export function StormTicker() {
         </Link>
       ),
     }));
-  }, []);
+  }, [tickerItems]);
 
   return (
     <section 

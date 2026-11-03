@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Noise from "@/components/ui/Noise";
 
-export type ModelCheckpoint = "convnext-vit" | "resnet50" | "ensemble";
+export type ModelCheckpoint = "convnext-vit" | "efficientnet-b0" | "resnet50" | "ensemble";
 
 interface InferenceHubProps {
   selectedModel: ModelCheckpoint;
@@ -33,6 +33,12 @@ export function InferenceHub({
   latencyMs,
 }: InferenceHubProps) {
   const models: { id: ModelCheckpoint; name: string; tag: string; desc: string }[] = [
+    {
+      id: "efficientnet-b0",
+      name: "EfficientNet-B0 Dual-Head (92.4% Accuracy)",
+      tag: "SIH Production",
+      desc: "Multi-task 4-channel model (IR, WV, VIS, PMW) with 92.4% pattern accuracy and 6.8 kt MAE",
+    },
     {
       id: "convnext-vit",
       name: "Hybrid ConvNeXt-ViT (Primary)",

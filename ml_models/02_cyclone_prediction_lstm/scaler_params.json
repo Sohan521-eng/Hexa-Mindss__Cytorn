@@ -1,0 +1,19 @@
+{
+  "LAT": { "mean": 15.421, "std": 5.120 },
+  "LON": { "mean": 85.340, "std": 6.840 },
+  "WIND_KTS": { "mean": 48.650, "std": 24.310 },
+  "PRESSURE_HPA": { "mean": 988.420, "std": 18.540 },
+  "STORM_SPEED": { "mean": 12.450, "std": 6.820 },
+  "STORM_DIR_SIN": { "mean": 0.124, "std": 0.650 },
+  "STORM_DIR_COS": { "mean": 0.432, "std": 0.610 },
+  "WIND_CHANGE": { "mean": 1.150, "std": 5.420 },
+  "PRESSURE_CHANGE": { "mean": -0.850, "std": 4.120 },
+  "LAT_CHANGE": { "mean": 0.320, "std": 0.450 },
+  "LON_CHANGE": { "mean": 0.280, "std": 0.510 },
+  "DIST2LAND": { "mean": 380.200, "std": 240.500 },
+  "MONTH_SIN": { "mean": 0.450, "std": 0.480 },
+  "MONTH_COS": { "mean": -0.150, "std": 0.520 },
+  "HOUR_SIN": { "mean": 0.010, "std": 0.707 },
+  "HOUR_COS": { "mean": 0.010, "std": 0.707 },
+  "YEAR": { "mean": 2008.500, "std": 14.200 }
+}

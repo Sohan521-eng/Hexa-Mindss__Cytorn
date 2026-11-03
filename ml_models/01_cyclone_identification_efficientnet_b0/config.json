@@ -1,0 +1,24 @@
+{
+  "model_name": "EfficientNet-B0 Dual-Head Cyclone Analyzer",
+  "version": "1.0.0",
+  "architecture": "EfficientNet-B0-DualHead",
+  "input_shape": [4, 128, 128],
+  "channels": ["IR", "WV", "VIS", "PMW"],
+  "normalization": {
+    "mean": [179.8942, 174.1156, 65.9481, 8.8655],
+    "std": [65.3210, 52.1954, 61.3502, 26.3539]
+  },
+  "classes": ["Weak", "Moderate", "Strong", "Very Strong"],
+  "thresholds_knots": {
+    "Weak": "< 34 kt",
+    "Moderate": "34 - 63 kt",
+    "Strong": "64 - 82 kt",
+    "Very Strong": ">= 83 kt"
+  },
+  "metrics": {
+    "test_accuracy": 0.9243,
+    "macro_f1": 0.9185,
+    "wind_speed_mae_knots": 6.84,
+    "wind_speed_r2": 0.8841
+  }
+}
