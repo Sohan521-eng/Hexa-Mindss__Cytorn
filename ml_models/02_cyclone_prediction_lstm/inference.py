@@ -243,4 +243,4 @@ if __name__ == "__main__":
     print("\n2. Kinematic Hallucination Clamping Test:")
     print(f"Requested: (22.0, 88.5) -> Clamped: ({clamped_lat}, {clamped_lon}) at distance {dist} km")
     assert clamped is True
-    print("✅ Model 2 anti-hallucination verification passed successfully.")
+    print("[PASS] Model 2 anti-hallucination verification passed successfully.")
