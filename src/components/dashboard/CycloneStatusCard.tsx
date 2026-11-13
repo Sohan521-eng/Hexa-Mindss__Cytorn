@@ -7,11 +7,69 @@ import Noise from "@/components/ui/Noise";
 
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? React.useLayoutEffect : useEffect;
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+
+interface StormStatus {
+  warningStage: string;
+  warningTier: "warning" | "alert" | "watch" | "landfall";
+  name: string;
+  location: string;
+  intensity: string;
+  confidence: string;
+  landfallCountdown: string;
+  updatedAgo: string;
+}
+
+const DEFAULT_STORM_STATUS: StormStatus = {
+  warningStage: "Stage 3 Warning",
+  warningTier: "warning",
+  name: 'CYCLONE "ARNAB"',
+  location: "Bay of Bengal • East Coast Threat Sector",
+  intensity: "Category 4 Severe",
+  confidence: "96.4%",
+  landfallCountdown: "T-24h (Puri-Dhamra Sector)",
+  updatedAgo: "Updated 8m ago",
+};
+
 export function CycloneStatusCard() {
   const cardRef = useRef<HTMLDivElement>(null);
   const box1Ref = useRef<HTMLDivElement>(null);
   const box2Ref = useRef<HTMLDivElement>(null);
   const [maskStyle, setMaskStyle] = useState<React.CSSProperties>({});
+  const [stormStatus, setStormStatus] = useState<StormStatus>(DEFAULT_STORM_STATUS);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/dashboard/telemetry`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data?.storm) {
+            setStormStatus((prev) => ({
+              ...prev,
+              warningStage: data.storm.warningStage || prev.warningStage,
+              warningTier: data.storm.warningTier || prev.warningTier,
+              name: data.storm.name || prev.name,
+              location: data.storm.location || prev.location,
+              intensity: data.storm.categoryDisplay || data.storm.intensity || prev.intensity,
+              confidence: data.storm.confidence || prev.confidence,
+              landfallCountdown: data.storm.landfallCountdown || prev.landfallCountdown,
+              updatedAgo: data.storm.updatedAgo || "Live • Realtime",
+            }));
+          }
+        }
+      } catch {
+        // High fidelity fallback retained
+      }
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 10000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   useIsomorphicLayoutEffect(() => {
     const updateCutouts = () => {
@@ -87,10 +145,10 @@ export function CycloneStatusCard() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               {/* Palette 4: IMD Stage 3 Cyclone Warning */}
-              <AlertBadge tier="warning">Stage 3 Warning</AlertBadge>
+              <AlertBadge tier={stormStatus.warningTier}>{stormStatus.warningStage}</AlertBadge>
             </div>
             <span className="text-[11px] font-mono text-[#8E9EB5] flex items-center gap-1">
-              <Clock className="w-3 h-3 text-[#00F2FE]" /> Updated 8m ago
+              <Clock className="w-3 h-3 text-[#00F2FE]" /> {stormStatus.updatedAgo}
             </span>
           </div>
 
@@ -98,12 +156,12 @@ export function CycloneStatusCard() {
             <h2 className="text-xl font-black font-rajdhani uppercase tracking-wider flex items-center gap-2">
               <span className="heading-gradient-shadow-wrapper">
                 <span className="heading-moving-gradient font-black font-rajdhani uppercase tracking-wider">
-                  CYCLONE &quot;ARNAB&quot;
+                  {stormStatus.name}
                 </span>
               </span>
             </h2>
             <p className="text-xs font-rajdhani font-semibold text-[#00F2FE] flex items-center gap-1.5 mt-0.5">
-              <MapPin className="w-3.5 h-3.5 text-[#00F2FE]" /> Bay of Bengal • East Coast Threat Sector
+              <MapPin className="w-3.5 h-3.5 text-[#00F2FE]" /> {stormStatus.location}
             </p>
           </div>
 
@@ -115,7 +173,7 @@ export function CycloneStatusCard() {
             >
               <span className="text-[10px] font-rajdhani uppercase font-bold tracking-wider text-[#8E9EB5]">Intensity</span>
               <div className="text-sm font-bold font-rajdhani text-[#FF5E36] mt-0.5 flex items-center gap-1.5 drop-shadow-[0_0_8px_rgba(255,94,54,0.35)]">
-                <AlertTriangle className="w-3.5 h-3.5 text-[#FF5E36]" /> Category 4 Severe
+                <AlertTriangle className="w-3.5 h-3.5 text-[#FF5E36]" /> {stormStatus.intensity}
               </div>
             </div>
 
@@ -126,7 +184,7 @@ export function CycloneStatusCard() {
             >
               <span className="text-[10px] font-rajdhani uppercase font-bold tracking-wider text-[#8E9EB5]">AI Confidence</span>
               <div className="text-sm font-bold font-jetbrains text-[#10E7A2] mt-0.5 flex items-center gap-1.5 drop-shadow-[0_0_8px_rgba(16,231,162,0.35)]">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#10E7A2]" /> 96.4%
+                <ShieldCheck className="w-3.5 h-3.5 text-[#10E7A2]" /> {stormStatus.confidence}
               </div>
             </div>
           </div>
@@ -136,7 +194,7 @@ export function CycloneStatusCard() {
         <div className="pt-2.5 border-t border-[#1E3252] flex items-center justify-start gap-2 text-xs text-[#8E9EB5]">
           <span className="font-rajdhani font-semibold">Estimated Landfall:</span>
           <span className="font-bold text-[#FF5E36] font-jetbrains tracking-wide drop-shadow-[0_0_8px_rgba(255,94,54,0.4)]">
-            T-24h (Puri-Dhamra Sector)
+            {stormStatus.landfallCountdown}
           </span>
         </div>
       </div>

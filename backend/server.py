@@ -57,6 +57,9 @@ class CycloAiHttpHandler(BaseHTTPRequestHandler):
         elif path == "/api/v1/satellite/realtime-feed":
             self._respond_json(200, routes.get_satellite_feed())
 
+        elif path == "/api/v1/dashboard/telemetry":
+            self._respond_json(200, routes.get_dashboard_telemetry())
+
         else:
             self._respond_json(404, {"error": "Endpoint Not Found", "path": path})
 

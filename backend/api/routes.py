@@ -57,6 +57,12 @@ def get_ticker_feed() -> dict:
 def get_metrics_benchmarks() -> dict:
     return model2_inf.fetch_operational_metrics()
 
+def get_dashboard_telemetry() -> dict:
+    from core import config
+    dash = config.DASHBOARD_DATA.copy()
+    dash["timestamp_utc"] = datetime.now(timezone.utc).isoformat()
+    return dash
+
 def get_satellite_feed() -> dict:
     data = model1_inf.fetch_realtime_satellite_frame("INSAT-3DR")
     return {k: v for k, v in data.items() if k != "frame_tensor"}

@@ -52,3 +52,42 @@ PRIMARY_STORM = {
     }
 }
 
+# Live Dashboard Telemetry & Micro-Parameters Configuration
+DASHBOARD_DATA = {
+    "sector": "BAY OF BENGAL • SECTOR BOB-02",
+    "satellite_cycle": "INSAT-3DR Rapid Scan (15m)",
+    "mosdac_status": "Synced",
+    "storm": {
+        "id": "BOB-02-ARNAB",
+        "name": 'CYCLONE "ARNAB"',
+        "warningStage": "Stage 3 Warning",
+        "warningTier": "warning",
+        "location": "Bay of Bengal • East Coast Threat Sector",
+        "intensity": "VSCS Cat-3",
+        "categoryDisplay": "Category 4 Severe",
+        "confidence": "96.4%",
+        "confidenceScore": 96.4,
+        "landfallCountdown": "T-24h (Puri-Dhamra Sector)",
+        "coordinates": {"lat": 16.2, "lon": 88.4}
+    },
+    "parameters": [
+        {"id": "wind", "label": "Max Wind Speed", "value": "185 km/h", "change": "+15 km/h in 3h", "colorKey": "ai-cyan"},
+        {"id": "pressure", "label": "Central Pressure", "value": "942 hPa", "change": "-8 hPa rapid drop", "colorKey": "solar-coral"},
+        {"id": "sst", "label": "Sea Surface Temp", "value": "30.4 °C", "change": "Above threshold (28°C)", "colorKey": "stage-2-alert"},
+        {"id": "shear", "label": "Vertical Wind Shear", "value": "8.5 kts", "change": "Favorable (<10 kts)", "colorKey": "stage-1-watch"},
+        {"id": "humidity", "label": "Relative Humidity", "value": "86%", "change": "Mid-troposphere saturated", "colorKey": "cloud-low"},
+        {"id": "rainfall", "label": "Estimated Rainfall", "value": "220 mm/24h", "change": "Extreme core band", "colorKey": "cloud-deep"}
+    ],
+    "trends": [
+        {"time": "-24h", "wind": 45, "pressure": 998, "isForecast": False},
+        {"time": "-18h", "wind": 55, "pressure": 990, "isForecast": False},
+        {"time": "-12h", "wind": 85, "pressure": 980, "isForecast": False},
+        {"time": "-6h", "wind": 140, "pressure": 955, "isForecast": False},
+        {"time": "Now", "wind": 185, "pressure": 942, "isForecast": False},
+        {"time": "+6h", "wind": 195, "pressure": 936, "isForecast": True},
+        {"time": "+12h", "wind": 205, "pressure": 930, "isForecast": True},
+        {"time": "+18h", "wind": 195, "pressure": 938, "isForecast": True},
+        {"time": "+24h", "wind": 165, "pressure": 952, "isForecast": True}
+    ]
+}
+

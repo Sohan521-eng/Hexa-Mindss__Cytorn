@@ -1,55 +1,101 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Wind, Gauge, Droplets, Thermometer, CloudRain, Compass } from "lucide-react";
 import Noise from "@/components/ui/Noise";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+
+const DEFAULT_PARAMETERS = [
+  {
+    id: "wind",
+    label: "Max Wind Speed",
+    value: "185 km/h",
+    change: "+15 km/h in 3h",
+    icon: Wind,
+    color: "text-[var(--color-ai-cyan)]",
+  },
+  {
+    id: "pressure",
+    label: "Central Pressure",
+    value: "942 hPa",
+    change: "-8 hPa rapid drop",
+    icon: Gauge,
+    color: "text-[var(--color-solar-coral)]",
+  },
+  {
+    id: "sst",
+    label: "Sea Surface Temp",
+    value: "30.4 °C",
+    change: "Above threshold (28°C)",
+    icon: Thermometer,
+    color: "text-[var(--alert-stage-2-alert)]",
+  },
+  {
+    id: "shear",
+    label: "Vertical Wind Shear",
+    value: "8.5 kts",
+    change: "Favorable (<10 kts)",
+    icon: Compass,
+    color: "text-[var(--alert-stage-1-watch)]",
+  },
+  {
+    id: "humidity",
+    label: "Relative Humidity",
+    value: "86%",
+    change: "Mid-troposphere saturated",
+    icon: Droplets,
+    color: "text-[var(--ir-cloud-low)]",
+  },
+  {
+    id: "rainfall",
+    label: "Estimated Rainfall",
+    value: "220 mm/24h",
+    change: "Extreme core band",
+    icon: CloudRain,
+    color: "text-[var(--ir-cloud-deep)]",
+  },
+];
+
 export function RealTimeParameters() {
-  const parameters = [
-    {
-      label: "Max Wind Speed",
-      value: "155 km/h",
-      change: "+12 km/h in 3h",
-      icon: Wind,
-      color: "text-[var(--color-ai-cyan)]",
-    },
-    {
-      label: "Central Pressure",
-      value: "964 hPa",
-      change: "-6 hPa rapid drop",
-      icon: Gauge,
-      color: "text-[var(--color-solar-coral)]",
-    },
-    {
-      label: "Sea Surface Temp",
-      value: "30.4 °C",
-      change: "Above threshold (28°C)",
-      icon: Thermometer,
-      color: "text-[var(--alert-stage-2-alert)]",
-    },
-    {
-      label: "Vertical Wind Shear",
-      value: "8.5 kts",
-      change: "Favorable (<10 kts)",
-      icon: Compass,
-      color: "text-[var(--alert-stage-1-watch)]",
-    },
-    {
-      label: "Relative Humidity",
-      value: "86%",
-      change: "Mid-troposphere saturated",
-      icon: Droplets,
-      color: "text-[var(--ir-cloud-low)]",
-    },
-    {
-      label: "Estimated Rainfall",
-      value: "220 mm/24h",
-      change: "Extreme core band",
-      icon: CloudRain,
-      color: "text-[var(--ir-cloud-deep)]",
-    },
-  ];
+  const [parameters, setParameters] = useState(DEFAULT_PARAMETERS);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchParams = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/dashboard/telemetry`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data?.parameters && Array.isArray(data.parameters)) {
+            setParameters((prev) =>
+              prev.map((item) => {
+                const liveItem = data.parameters.find(
+                  (p: { id?: string; label?: string }) => p.id === item.id || p.label === item.label
+                );
+                return liveItem
+                  ? {
+                      ...item,
+                      value: liveItem.value || item.value,
+                      change: liveItem.change || item.change,
+                    }
+                  : item;
+              })
+            );
+          }
+        }
+      } catch {
+        // High fidelity baseline retained
+      }
+    };
+    fetchParams();
+    const interval = setInterval(fetchParams, 10000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">

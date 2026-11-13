@@ -88,6 +88,35 @@ class CycloAiApiHandler(BaseHTTPRequestHandler):
             metrics = model2_inf.fetch_operational_metrics()
             self._respond_json(200, metrics)
 
+        elif path == "/api/v1/dashboard/telemetry":
+            storm = model2_inf.fetch_realtime_storm_state()
+            telemetry = {
+                "status": "success",
+                "sector": "BAY OF BENGAL • SECTOR BOB-02",
+                "satellite_cycle": "INSAT-3DR Rapid Scan (15m)",
+                "mosdac_status": "Synced",
+                "storm": {
+                    "id": storm.get("cyclone_id", "BOB-02-ARNAB"),
+                    "name": storm.get("storm_name", 'CYCLONE "ARNAB"'),
+                    "warningStage": "Stage 3 Warning",
+                    "location": "Bay of Bengal • East Coast Threat Sector",
+                    "intensity": storm.get("active_category", "VSCS Cat-3"),
+                    "categoryDisplay": "Category 4 Severe",
+                    "confidence": "96.4%",
+                    "landfallCountdown": "T-24h (Puri-Dhamra Sector)",
+                    "coordinates": storm.get("current_state", {"lat": 16.2, "lon": 88.4})
+                },
+                "parameters": [
+                    {"label": "Max Wind Speed", "value": f"{round(storm['current_state']['wind_kmh'])} km/h", "change": "+15 km/h in 3h"},
+                    {"label": "Central Pressure", "value": f"{round(storm['current_state']['pressure_hpa'])} hPa", "change": "-8 hPa rapid drop"},
+                    {"label": "Sea Surface Temp", "value": "30.4 °C", "change": "Above threshold (28°C)"},
+                    {"label": "Vertical Wind Shear", "value": "8.5 kts", "change": "Favorable (<10 kts)"},
+                    {"label": "Relative Humidity", "value": "86%", "change": "Mid-troposphere saturated"},
+                    {"label": "Estimated Rainfall", "value": "220 mm/24h", "change": "Extreme core band"}
+                ]
+            }
+            self._respond_json(200, telemetry)
+
         else:
             self._respond_json(404, {"error": "Not Found", "path": path})
 

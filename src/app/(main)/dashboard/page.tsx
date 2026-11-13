@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CycloneStatusCard } from "@/components/dashboard/CycloneStatusCard";
 import { RealTimeParameters } from "@/components/dashboard/RealTimeParameters";
 import { MapLayerCanvas } from "@/components/map/MapLayerCanvas";
@@ -14,6 +14,38 @@ import Noise from "@/components/ui/Noise";
 export default function DashboardPage() {
   const [isXaiDrawerOpen, setIsXaiDrawerOpen] = useState(false);
   const [activeRightTab, setActiveRightTab] = useState<"trends" | "dispatch">("trends");
+  const [basinSector, setBasinSector] = useState("BAY OF BENGAL • SECTOR BOB-02");
+  const [activeCycle, setActiveCycle] = useState("INSAT-3DR Rapid Scan (15m)");
+
+  useEffect(() => {
+    let isMounted = true;
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+
+    const fetchBasinInfo = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/dashboard/telemetry`, {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (isMounted) {
+            if (json.sector) setBasinSector(json.sector);
+            if (json.cycle) setActiveCycle(json.cycle);
+          }
+        }
+      } catch (err) {
+        console.warn("[DashboardPage] Telemetry header fetch error:", err);
+      }
+    };
+
+    fetchBasinInfo();
+    const interval = setInterval(fetchBasinInfo, 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <div className="space-y-4 relative">
@@ -35,7 +67,7 @@ export default function DashboardPage() {
           >
             <Sparkles className="w-3.5 h-3.5 text-[#00F2FE] shrink-0" />
             <span className="text-xs font-jetbrains [font-feature-settings:'tnum'_on] font-bold tracking-wider text-[#00F2FE]">
-              BAY OF BENGAL • SECTOR BOB-02
+              {basinSector}
             </span>
           </ShinyBadge>
         </div>
@@ -60,7 +92,7 @@ export default function DashboardPage() {
               Active Cycle:
             </span>
             <span className="text-xs font-jetbrains [font-feature-settings:'tnum'_on] font-bold tracking-wider text-[#00F2FE]">
-              INSAT-3DR Rapid Scan (15m)
+              {activeCycle}
             </span>
           </ShinyBadge>
 

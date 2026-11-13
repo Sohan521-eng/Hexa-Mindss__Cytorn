@@ -22,16 +22,16 @@ interface TrendDataPoint {
   isForecast?: boolean;
 }
 
-const METEOROLOGICAL_DATA: TrendDataPoint[] = [
+const DEFAULT_METEOROLOGICAL_DATA: TrendDataPoint[] = [
   { time: "-24h", wind: 45, pressure: 996, isForecast: false },
   { time: "-18h", wind: 55, pressure: 990, isForecast: false },
   { time: "-12h", wind: 72, pressure: 982, isForecast: false },
-  { time: "-6h", wind: 92, pressure: 970, isForecast: false },
-  { time: "Now", wind: 115, pressure: 954, isForecast: false },
-  { time: "+6h", wind: 128, pressure: 945, isForecast: true },
-  { time: "+12h", wind: 136, pressure: 938, isForecast: true },
-  { time: "+18h", wind: 140, pressure: 934, isForecast: true },
-  { time: "+24h", wind: 125, pressure: 944, isForecast: true },
+  { time: "-6h", wind: 90, pressure: 970, isForecast: false },
+  { time: "Now", wind: 100, pressure: 942, isForecast: false },
+  { time: "+6h", wind: 108, pressure: 936, isForecast: true },
+  { time: "+12h", wind: 115, pressure: 930, isForecast: true },
+  { time: "+18h", wind: 110, pressure: 938, isForecast: true },
+  { time: "+24h", wind: 85, pressure: 960, isForecast: true },
 ];
 
 interface CustomTooltipProps {
@@ -86,11 +86,42 @@ function CustomChartTooltip({ active, payload, label }: CustomTooltipProps) {
 }
 
 export function TrendCharts() {
+  const [trendData, setTrendData] = useState<TrendDataPoint[]>(DEFAULT_METEOROLOGICAL_DATA);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    let isMounted = true;
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+
+    const fetchTrends = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/dashboard/telemetry`, {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (isMounted && Array.isArray(json.trends) && json.trends.length > 0) {
+            setTrendData(json.trends);
+          }
+        }
+      } catch (err) {
+        console.warn("[TrendCharts] Real-time trend fetch error, fallback active:", err);
+      }
+    };
+
+    fetchTrends();
+    const interval = setInterval(fetchTrends, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
+
+  const peakWind = trendData.length > 0 ? Math.max(...trendData.map((d) => d.wind)) : 115;
+  const minPressure = trendData.length > 0 ? Math.min(...trendData.map((d) => d.pressure)) : 930;
 
   return (
     <Card 
@@ -138,7 +169,7 @@ export function TrendCharts() {
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={METEOROLOGICAL_DATA}
+                data={trendData}
                 margin={{ top: 10, right: 12, left: -20, bottom: 0 }}
               >
                 <defs>
@@ -243,11 +274,11 @@ export function TrendCharts() {
         <div className="mt-2.5 pt-2 border-t border-[#1E3252] flex items-center justify-between text-[11px] font-rajdhani text-[#8E9EB5]">
           <div className="flex items-center gap-1.5">
             <TrendingUp className="w-3.5 h-3.5 text-[#00F2FE]" />
-            <span>Peak Projected: <strong className="text-white font-jetbrains">140 kts</strong></span>
+            <span>Peak Projected: <strong className="text-white font-jetbrains [font-feature-settings:'tnum'_on]">{peakWind} kts</strong></span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF5E36]" />
-            <span>Min Pressure: <strong className="text-white font-jetbrains">934 hPa</strong></span>
+            <span>Min Pressure: <strong className="text-white font-jetbrains [font-feature-settings:'tnum'_on]">{minPressure} hPa</strong></span>
           </div>
           <div className="flex items-center gap-1 text-[#FF5E36] font-semibold">
             <AlertTriangle className="w-3 h-3" />
