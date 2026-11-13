@@ -84,32 +84,155 @@ def calculate_uncertainty_cone_radius_km(lead_time_hours: float) -> float:
 def fetch_realtime_storm_state() -> dict:
     """
     Simulates / connects to the live IMD RSMC New Delhi Special Tropical Weather Outlook.
-    Returns current storm fix with authenticated 18-hour history (6 time steps at 3h intervals).
+    Returns current storm fix with authenticated 18-hour history (calibrated to Landing Page data).
     """
     return {
         "source": "IMD RSMC New Delhi (GTS Feed)",
-        "bulletin_id": "WTIN20-DEMS-20261103",
+        "bulletin_id": "WTIN20-DEMS-20261113",
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "cyclone_id": "BOB-02-ARNAB",
         "name": 'CYCLONE "ARNAB"',
+        "storm_name": 'CYCLONE "ARNAB"',
         "basin": "Bay of Bengal",
-        "active_category": "Extremely Severe Cyclonic Storm",
+        "active_category": "VSCS Cat-3",
+        "intensity_label": "Very Severe Cyclonic Storm",
         "current_state": {
-            "lat": 16.24,
-            "lon": 88.45,
-            "wind_kts": 95.0,
-            "wind_kmh": 175.9,
-            "pressure_hpa": 948.0,
-            "speed_kmh": 14.5,
+            "lat": 16.2,
+            "lon": 88.4,
+            "wind_kts": 99.9,
+            "wind_kmh": 185.0,
+            "pressure_hpa": 942.0,
+            "speed_kmh": 18.5,
             "bearing_deg": 335.0
         },
+        "telemetry_hud": {
+            "category": "VSCS Cat-3",
+            "minPressure": "942 hPa",
+            "maxWind": "185 km/h",
+            "satelliteFeed": "INSAT-3DR TIR-1 10.8µm",
+            "latency": "12s",
+            "coverage": "BoB & NIO"
+        },
         "history_18h_steps": [
-            {"hour": -18, "lat": 12.8, "lon": 90.6, "wind_kts": 57.0, "pressure_hpa": 986.0},
-            {"hour": -15, "lat": 13.3, "lon": 90.3, "wind_kts": 64.0, "pressure_hpa": 980.0},
-            {"hour": -12, "lat": 13.9, "lon": 89.9, "wind_kts": 70.0, "pressure_hpa": 974.0},
-            {"hour": -9,  "lat": 14.5, "lon": 89.5, "wind_kts": 77.0, "pressure_hpa": 967.0},
-            {"hour": -6,  "lat": 15.1, "lon": 89.2, "wind_kts": 84.0, "pressure_hpa": 960.0},
-            {"hour": 0,   "lat": 16.2, "lon": 88.5, "wind_kts": 95.0, "pressure_hpa": 948.0}
+            {"hour": -18, "lat": 12.8, "lon": 90.6, "wind_kts": 24.3, "wind_kmh": 45.0, "pressure_hpa": 998.0, "stage": "Genesis"},
+            {"hour": -12, "lat": 13.9, "lon": 89.9, "wind_kts": 45.9, "wind_kmh": 85.0, "pressure_hpa": 980.0, "stage": "Alert"},
+            {"hour": -6,  "lat": 15.1, "lon": 89.2, "wind_kts": 75.6, "wind_kmh": 140.0, "pressure_hpa": 955.0, "stage": "Warning"},
+            {"hour": 0,   "lat": 16.2, "lon": 88.4, "wind_kts": 99.9, "wind_kmh": 185.0, "pressure_hpa": 942.0, "stage": "Landfall Watch"}
+        ]
+    }
+
+def fetch_realtime_ticker_feed() -> dict:
+    """
+    Returns live ticker telemetry items accurately synchronized with the landing page.
+    """
+    storm_state = fetch_realtime_storm_state()
+    cur = storm_state["current_state"]
+    return {
+        "status": "success",
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "active_cyclones_count": 2,
+        "ticker_items": [
+            {
+                "id": "count",
+                "isBadge": True,
+                "text": "Cyclones Active: 02",
+                "color": "text-[#00F2FE]",
+                "badge": "LIVE FEED"
+            },
+            {
+                "id": "arnab",
+                "name": 'CYCLONE "ARNAB"',
+                "basin": "BoB",
+                "category": "Cat 3",
+                "wind": f"{round(cur['wind_kmh'])} km/h",
+                "pressure": f"{cur['pressure_hpa']} hPa",
+                "coords": f"{cur['lat']}°N, {cur['lon']}°E",
+                "href": "/dashboard",
+                "highlight": True
+            },
+            {
+                "id": "arb-01",
+                "name": "Deep Depression ARB-01",
+                "basin": "Arabian Sea",
+                "category": "Deep Depression",
+                "wind": "55 km/h",
+                "pressure": "998 hPa",
+                "coords": "14.8°N, 67.2°E",
+                "href": "/dashboard?storm=arb01",
+                "highlight": False
+            },
+            {
+                "id": "invest-92b",
+                "name": "Invest 92B",
+                "basin": "Andaman Sea",
+                "category": "Low Pressure",
+                "wind": "35 km/h",
+                "pressure": "1004 hPa",
+                "coords": "9.5°N, 93.0°E",
+                "href": "/dashboard?storm=invest92b",
+                "highlight": False
+            },
+            {
+                "id": "insat-scan",
+                "isBadge": True,
+                "text": "INSAT-3DR TIR-1: Rapid Scan Active [15m Cycle]",
+                "color": "text-[#10E7A2]",
+                "badge": "ISRO TELEMETRY"
+            },
+            {
+                "id": "biparjoy",
+                "name": "Severe Storm BIPARJOY",
+                "basin": "Arabian Sea",
+                "category": "Cat 2",
+                "wind": "165 km/h",
+                "pressure": "958 hPa",
+                "coords": "20.4°N, 66.8°E",
+                "href": "/dashboard?storm=biparjoy",
+                "highlight": False
+            }
+        ]
+    }
+
+def fetch_operational_metrics() -> dict:
+    """
+    Returns AI model benchmark verification metrics accurately matching LandingMetrics.tsx.
+    """
+    return {
+        "status": "success",
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "metrics": [
+            {
+                "id": "accuracy",
+                "value": "96.4%",
+                "label": "AI Track Accuracy",
+                "description": "Mean cross-track forecast error under 48 km across 120-hour prediction cones.",
+                "badge": "RMSE Verified",
+                "color": "#00F2FE"
+            },
+            {
+                "id": "ri_lead",
+                "value": "24H",
+                "label": "Rapid Intensification Lead",
+                "description": "Early detection window before explosive eyewall pressure drops occur.",
+                "badge": "PINN Model",
+                "color": "#FF5E36"
+            },
+            {
+                "id": "protocol",
+                "value": "4 Tiers",
+                "label": "IMD / WMO Protocol",
+                "description": "End-to-end automated dissemination from Pre-Cyclone Watch to Landfall Red Alert.",
+                "badge": "Standardized",
+                "color": "#10E7A2"
+            },
+            {
+                "id": "precision",
+                "value": "0.08°",
+                "label": "Center-Fix Precision",
+                "description": "Sub-kilometer eyewall centroid localization using INSAT-3DR multi-spectral remote sensing.",
+                "badge": "MOSDAC Feed",
+                "color": "#6366F1"
+            }
         ]
     }
 

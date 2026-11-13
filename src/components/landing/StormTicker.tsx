@@ -21,7 +21,7 @@ interface TickerItem {
   highlight?: boolean;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 export function StormTicker() {
   const tickerData: TickerItem[] = [
@@ -91,6 +91,17 @@ export function StormTicker() {
     let isMounted = true;
     const fetchLiveTicker = async () => {
       try {
+        // Try dedicated ticker feed first
+        const feedRes = await fetch(`${API_BASE_URL}/ticker/feed`);
+        if (feedRes.ok) {
+          const feedData = await feedRes.json();
+          if (isMounted && feedData?.ticker_items && Array.isArray(feedData.ticker_items)) {
+            setTickerItems(feedData.ticker_items);
+            return;
+          }
+        }
+
+        // Fallback to active storm state
         const res = await fetch(`${API_BASE_URL}/storms/active`);
         if (res.ok) {
           const data = await res.json();
@@ -114,8 +125,10 @@ export function StormTicker() {
       }
     };
     fetchLiveTicker();
+    const interval = setInterval(fetchLiveTicker, 12000);
     return () => {
       isMounted = false;
+      clearInterval(interval);
     };
   }, []);
 

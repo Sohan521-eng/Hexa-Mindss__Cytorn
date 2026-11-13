@@ -1,0 +1,16 @@
+# CYCLO-AI Meteorological Deep Learning & API Requirements
+# Production-ready stack for SIH 2026
+
+# Web API Framework (Optional - standard library fallback built-in)
+fastapi>=0.110.0
+uvicorn>=0.28.0
+pydantic>=2.6.0
+
+# Scientific & Remote Sensing Computation
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Deep Learning Frameworks & Vision Backbones
+torch>=2.2.0
+torchvision>=0.17.0
+

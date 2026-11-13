@@ -34,7 +34,7 @@ function PerformanceTelemetry() {
   );
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 export function HeroVideo() {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
@@ -58,13 +58,16 @@ export function HeroVideo() {
         const res = await fetch(`${API_BASE_URL}/storms/active`);
         if (res.ok) {
           const data = await res.json();
-          if (isMounted && data?.current_state) {
+          if (isMounted) {
             setTelemetry((prev) => ({
               ...prev,
               name: data.storm_name || data.name || prev.name,
-              category: data.active_category || "VSCS Cat-3",
-              minPressure: `${data.current_state.pressure_hpa} hPa`,
-              maxWind: `${Math.round(data.current_state.wind_kmh)} km/h`,
+              category: data.active_category || data.telemetry_hud?.category || prev.category,
+              minPressure: data.telemetry_hud?.minPressure || (data.current_state ? `${data.current_state.pressure_hpa} hPa` : prev.minPressure),
+              maxWind: data.telemetry_hud?.maxWind || (data.current_state ? `${Math.round(data.current_state.wind_kmh)} km/h` : prev.maxWind),
+              satelliteFeed: data.telemetry_hud?.satelliteFeed || prev.satelliteFeed,
+              latency: data.telemetry_hud?.latency || prev.latency,
+              coverage: data.telemetry_hud?.coverage || prev.coverage,
             }));
           }
         }
@@ -73,8 +76,10 @@ export function HeroVideo() {
       }
     };
     fetchHeroData();
+    const interval = setInterval(fetchHeroData, 10000);
     return () => {
       isMounted = false;
+      clearInterval(interval);
     };
   }, []);
 

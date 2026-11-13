@@ -24,10 +24,12 @@ In safety-critical meteorology, uncontrolled statistical networks can output unp
 
 ## 🚀 Running the Real-Time ML API Service
 
-The backend service is located at [`ml_models/api_service.py`](./api_service.py) and listens on port `8000` (matching `NEXT_PUBLIC_API_URL` in [`src/lib/api.ts`](../../src/lib/api.ts)):
+The backend service is located at [`backend/server.py`](../backend/server.py) (and [`ml_models/api_service.py`](./api_service.py)) and listens on port `8000` (matching `NEXT_PUBLIC_API_URL` in [`src/lib/api.ts`](../src/lib/api.ts)):
 
 ```bash
 # Start the central inference service:
+python backend/server.py
+# Or directly via ml_models:
 python ml_models/api_service.py
 ```
 

@@ -80,6 +80,14 @@ class CycloAiApiHandler(BaseHTTPRequestHandler):
             storm = model2_inf.fetch_realtime_storm_state()
             self._respond_json(200, storm)
 
+        elif path == "/api/v1/ticker/feed":
+            ticker = model2_inf.fetch_realtime_ticker_feed()
+            self._respond_json(200, ticker)
+
+        elif path == "/api/v1/metrics/benchmarks":
+            metrics = model2_inf.fetch_operational_metrics()
+            self._respond_json(200, metrics)
+
         else:
             self._respond_json(404, {"error": "Not Found", "path": path})
 

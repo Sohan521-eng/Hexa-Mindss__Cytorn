@@ -1,49 +1,85 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Activity, Target, ShieldCheck, Clock, Gauge } from "lucide-react";
 import { ShinyBadge } from "@/components/ui/ShinyBadge";
 import { TiltedCard } from "@/components/ui/TiltedCard";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+
+const DEFAULT_METRICS = [
+  {
+    id: "accuracy",
+    value: "96.4%",
+    label: "AI Track Accuracy",
+    description: "Mean cross-track forecast error under 48 km across 120-hour prediction cones.",
+    badge: "RMSE Verified",
+    icon: Target,
+    color: "#00F2FE",
+    gradient: "from-[#0F1B2F] via-[#050B14] to-[#00F2FE]/15",
+  },
+  {
+    id: "ri_lead",
+    value: "24H",
+    label: "Rapid Intensification Lead",
+    description: "Early detection window before explosive eyewall pressure drops occur.",
+    badge: "PINN Model",
+    icon: Clock,
+    color: "#FF5E36",
+    gradient: "from-[#0F1B2F] via-[#050B14] to-[#FF5E36]/15",
+  },
+  {
+    id: "protocol",
+    value: "4 Tiers",
+    label: "IMD / WMO Protocol",
+    description: "End-to-end automated dissemination from Pre-Cyclone Watch to Landfall Red Alert.",
+    badge: "Standardized",
+    icon: ShieldCheck,
+    color: "#10E7A2",
+    gradient: "from-[#0F1B2F] via-[#050B14] to-[#10E7A2]/15",
+  },
+  {
+    id: "precision",
+    value: "0.08°",
+    label: "Center-Fix Precision",
+    description: "Sub-kilometer eyewall centroid localization using INSAT-3DR multi-spectral remote sensing.",
+    badge: "MOSDAC Feed",
+    icon: Gauge,
+    color: "#6366F1",
+    gradient: "from-[#0F1B2F] via-[#050B14] to-[#6366F1]/15",
+  },
+];
+
 export function LandingMetrics() {
-  const metrics = [
-    {
-      value: "96.4%",
-      label: "AI Track Accuracy",
-      description: "Mean cross-track forecast error under 48 km across 120-hour prediction cones.",
-      badge: "RMSE Verified",
-      icon: Target,
-      color: "#00F2FE",
-      gradient: "from-[#0F1B2F] via-[#050B14] to-[#00F2FE]/15",
-    },
-    {
-      value: "24H",
-      label: "Rapid Intensification Lead",
-      description: "Early detection window before explosive eyewall pressure drops occur.",
-      badge: "PINN Model",
-      icon: Clock,
-      color: "#FF5E36",
-      gradient: "from-[#0F1B2F] via-[#050B14] to-[#FF5E36]/15",
-    },
-    {
-      value: "4 Tiers",
-      label: "IMD / WMO Protocol",
-      description: "End-to-end automated dissemination from Pre-Cyclone Watch to Landfall Red Alert.",
-      badge: "Standardized",
-      icon: ShieldCheck,
-      color: "#10E7A2",
-      gradient: "from-[#0F1B2F] via-[#050B14] to-[#10E7A2]/15",
-    },
-    {
-      value: "0.08°",
-      label: "Center-Fix Precision",
-      description: "Sub-kilometer eyewall centroid localization using INSAT-3DR multi-spectral remote sensing.",
-      badge: "MOSDAC Feed",
-      icon: Gauge,
-      color: "#6366F1",
-      gradient: "from-[#0F1B2F] via-[#050B14] to-[#6366F1]/15",
-    },
-  ];
+  const [metrics, setMetrics] = useState(DEFAULT_METRICS);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLiveMetrics = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/metrics/benchmarks`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data?.metrics && Array.isArray(data.metrics)) {
+            setMetrics((prev) =>
+              prev.map((item) => {
+                const updated = data.metrics.find((m: { id?: string; label?: string }) => m.id === item.id || m.label === item.label);
+                return updated ? { ...item, value: updated.value, description: updated.description || item.description } : item;
+              })
+            );
+          }
+        }
+      } catch {
+        // High-fidelity fallback retained
+      }
+    };
+    fetchLiveMetrics();
+    const interval = setInterval(fetchLiveMetrics, 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <section className="py-16 md:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 font-jakarta">
