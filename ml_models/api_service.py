@@ -117,6 +117,11 @@ class CycloAiApiHandler(BaseHTTPRequestHandler):
             }
             self._respond_json(200, telemetry)
 
+        elif path in ("/api/v1/analyzer/inference", "/api/v1/analyzer/infer"):
+            res = model1_inf.predict_cyclone(image_array=None)
+            status_code = 200 if res.get("status") == "success" else 422
+            self._respond_json(status_code, res)
+
         else:
             self._respond_json(404, {"error": "Not Found", "path": path})
 
@@ -132,14 +137,14 @@ class CycloAiApiHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             payload = {}
 
-        if path == "/api/v1/analyzer/inference":
+        if path in ("/api/v1/analyzer/inference", "/api/v1/analyzer/infer"):
             # Model 1: EfficientNet-B0 Dual Head
             # Execute with full anti-hallucination and thermodynamic verification
             res = model1_inf.predict_cyclone(image_array=None, source_metadata=payload.get("metadata"))
             status_code = 200 if res.get("status") == "success" else 422
             self._respond_json(status_code, res)
 
-        elif path == "/api/v1/forecast/predict":
+        elif path in ("/api/v1/forecast/predict", "/api/v1/forecast/trajectory"):
             # Model 2: Bi-LSTM Temporal Attention
             # Execute with hydrodynamic speed limit and Coriolis enforcement
             res = model2_inf.predict_trajectory(sequence=None, current_storm=payload.get("current_storm"))

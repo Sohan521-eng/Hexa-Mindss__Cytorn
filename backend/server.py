@@ -60,6 +60,10 @@ class CycloAiHttpHandler(BaseHTTPRequestHandler):
         elif path == "/api/v1/dashboard/telemetry":
             self._respond_json(200, routes.get_dashboard_telemetry())
 
+        elif path in ("/api/v1/analyzer/inference", "/api/v1/analyzer/infer"):
+            status_code, res = routes.run_analyzer_inference({})
+            self._respond_json(status_code, res)
+
         else:
             self._respond_json(404, {"error": "Endpoint Not Found", "path": path})
 
@@ -75,11 +79,11 @@ class CycloAiHttpHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             payload = {}
 
-        if path == "/api/v1/analyzer/inference":
+        if path in ("/api/v1/analyzer/inference", "/api/v1/analyzer/infer"):
             status_code, res = routes.run_analyzer_inference(payload)
             self._respond_json(status_code, res)
 
-        elif path == "/api/v1/forecast/predict":
+        elif path in ("/api/v1/forecast/predict", "/api/v1/forecast/trajectory"):
             status_code, res = routes.run_forecast_prediction(payload)
             self._respond_json(status_code, res)
 
