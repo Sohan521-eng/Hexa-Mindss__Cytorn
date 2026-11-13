@@ -79,15 +79,15 @@ DASHBOARD_DATA = {
         {"id": "rainfall", "label": "Estimated Rainfall", "value": "220 mm/24h", "change": "Extreme core band", "colorKey": "cloud-deep"}
     ],
     "trends": [
-        {"time": "-24h", "wind": 45, "pressure": 998, "isForecast": False},
+        {"time": "-24h", "wind": 45, "pressure": 996, "isForecast": False},
         {"time": "-18h", "wind": 55, "pressure": 990, "isForecast": False},
-        {"time": "-12h", "wind": 85, "pressure": 980, "isForecast": False},
-        {"time": "-6h", "wind": 140, "pressure": 955, "isForecast": False},
-        {"time": "Now", "wind": 185, "pressure": 942, "isForecast": False},
-        {"time": "+6h", "wind": 195, "pressure": 936, "isForecast": True},
-        {"time": "+12h", "wind": 205, "pressure": 930, "isForecast": True},
-        {"time": "+18h", "wind": 195, "pressure": 938, "isForecast": True},
-        {"time": "+24h", "wind": 165, "pressure": 952, "isForecast": True}
+        {"time": "-12h", "wind": 72, "pressure": 982, "isForecast": False},
+        {"time": "-6h", "wind": 90, "pressure": 970, "isForecast": False},
+        {"time": "Now", "wind": 100, "pressure": 942, "isForecast": False},
+        {"time": "+6h", "wind": 108, "pressure": 936, "isForecast": True},
+        {"time": "+12h", "wind": 115, "pressure": 930, "isForecast": True},
+        {"time": "+18h", "wind": 110, "pressure": 938, "isForecast": True},
+        {"time": "+24h", "wind": 85, "pressure": 960, "isForecast": True}
     ]
 }
 
