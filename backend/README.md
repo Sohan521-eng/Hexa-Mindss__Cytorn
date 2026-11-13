@@ -13,6 +13,9 @@ backend/
 ├── core/
 │   ├── config.py              # Central environment settings, ports, & storm constants
 │   └── guardrails.py          # Anti-hallucination thermodynamic & kinematic validators
+├── docs/
+│   ├── Cyclone_identification_EfficientNetB0.pdf # Research documentation for Model 1
+│   └── Cyclone_prediction_LSTM.pdf               # Research documentation for Model 2
 ├── models/
 │   ├── 01_cyclone_identification_efficientnet_b0/   # Satellite Pattern Classification & Wind Speed
 │   │   ├── config.json
@@ -28,6 +31,7 @@ backend/
 │       ├── MODEL_CARD.md
 │       ├── scaler_params.json
 │       └── weights/
+├── api_service.py             # Alternative direct entry point (alias for server.py)
 ├── requirements.txt           # Python dependency specifications
 ├── run_backend.bat            # 1-Click Windows launch script
 ├── run_backend.sh             # 1-Click Linux/macOS launch script
