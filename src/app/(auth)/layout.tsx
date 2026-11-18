@@ -2,8 +2,9 @@ import React from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Authentication | CYCLO-AI",
-  description: "Secure login and registration portal for CYCLO-AI.",
+  title: "Authentication Gateway | CYTORN",
+  description:
+    "Role-based mission-control authentication gateway for CYTORN Tropical Cyclone AI Prediction System.",
 };
 
 export default function AuthLayout({
@@ -12,11 +13,8 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen w-full bg-transparent text-white flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden selection:bg-[#00F2FE]/30 selection:text-white pt-20 sm:pt-24">
-      {/* Centered Minimalist Card Container */}
-      <div className="w-full max-w-md z-10">
-        {children}
-      </div>
+    <div className="fixed inset-0 z-[60] w-full bg-[#050B14] text-white overflow-y-auto overflow-x-hidden selection:bg-[#00F2FE]/30 selection:text-[#00F2FE]">
+      {children}
     </div>
   );
 }

@@ -1,12 +1,12 @@
 import React from "react";
 import type { Metadata } from "next";
-import { AuthTerminal } from "@/components/auth/AuthTerminal";
+import { AuthPageWrapper } from "@/components/auth/AuthPageWrapper";
 
 export const metadata: Metadata = {
-  title: "Sign In | CYCLO-AI",
-  description: "Sign in to CYCLO-AI command gateway.",
+  title: "Sign In | CYTORN Command Gateway",
+  description: "Authenticate to enter the CYTORN Tropical Cyclone AI Command Platform.",
 };
 
 export default function LoginPage() {
-  return <AuthTerminal initialMode="signin" />;
+  return <AuthPageWrapper initialMode="signin" />;
 }
