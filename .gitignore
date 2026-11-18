@@ -49,3 +49,7 @@ __pycache__/
 # nested clone ignore
 Hexa-Mindss__Cytorn/
 
+# runtime auth store (auto-seeded on boot)
+backend/data/auth_store.json
+backend/data/*.tmp
+

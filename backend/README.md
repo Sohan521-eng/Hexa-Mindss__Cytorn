@@ -10,9 +10,15 @@ Enterprise-grade meteorological machine learning inference engine and real-time 
 backend/
 ├── api/
 │   └── routes.py              # Modular API route dispatchers & telemetry transformers
+├── auth/
+│   ├── crypto.py              # PBKDF2-SHA512 password hashing & HS256 JWT signing
+│   ├── rbac.py                # 4-Tier RBAC permissions matrix & agency badge validators
+│   └── service.py             # Auth service, sliding-window rate limiter & audit logger
 ├── core/
 │   ├── config.py              # Central environment settings, ports, & storm constants
 │   └── guardrails.py          # Anti-hallucination thermodynamic & kinematic validators
+├── data/
+│   └── auth_store.json        # Auto-seeded persistent user & security audit log store
 ├── docs/
 │   ├── Cyclone_identification_EfficientNetB0.pdf # Research documentation for Model 1
 │   └── Cyclone_prediction_LSTM.pdf               # Research documentation for Model 2
@@ -77,6 +83,11 @@ The service will listen on `http://localhost:8000` (matching `NEXT_PUBLIC_API_UR
 | `GET` | `/api/v1/satellite/realtime-feed` | Calibrated INSAT-3DR multispectral frames metadata |
 | `POST` | `/api/v1/analyzer/inference` | Executes Model 1 with Grad-CAM and Atkinson-Holliday coupling |
 | `POST` | `/api/v1/forecast/predict` | Executes Model 2 with PINN kinematic bounds and RI probability |
+| `POST` | `/api/v1/auth/register` | Provisions account with PBKDF2-SHA512 hashing, RBAC tier & HttpOnly JWT cookie |
+| `POST` | `/api/v1/auth/login` | Authenticates credentials, enforces RBAC & rate limiting, issues HttpOnly JWT |
+| `GET` | `/api/v1/auth/me` | Validates active JWT session cookie / Bearer token & returns role permissions |
+| `POST` | `/api/v1/auth/logout` | Clears session cookie and logs operator sign-out in audit trail |
+| `GET` | `/api/v1/auth/audit-logs` | Returns persisted security audit events for Page 8 (`SecurityAuditPanel`) |
 
 ---
 

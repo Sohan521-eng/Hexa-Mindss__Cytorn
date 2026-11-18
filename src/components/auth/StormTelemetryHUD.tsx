@@ -1,19 +1,86 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { 
-  Radio, 
   Wind, 
   Gauge, 
-  Layers, 
-  ShieldCheck, 
   Lock, 
-  Globe2, 
   Activity 
 } from "lucide-react";
 import Noise from "@/components/ui/Noise";
 
+interface LiveAuthTelemetry {
+  stormName: string;
+  category: string;
+  basin: string;
+  pressureHpa: number;
+  windKmh: number;
+  dvorakT: string;
+  dvorakCI: string;
+  orbitalPass: string;
+}
+
+const DEFAULT_AUTH_TELEMETRY: LiveAuthTelemetry = {
+  stormName: 'CYCLONE "ARNAB"',
+  category: "VSCS Cat-3",
+  basin: "Bay of Bengal",
+  pressureHpa: 942,
+  windKmh: 185,
+  dvorakT: "T5.5",
+  dvorakCI: "CI 5.5",
+  orbitalPass: "INSAT-3DR (15m CYCLE)",
+};
+
 export const StormTelemetryHUD: React.FC = () => {
+  const [telemetry, setTelemetry] = useState<LiveAuthTelemetry>(DEFAULT_AUTH_TELEMETRY);
+
+  useEffect(() => {
+    let isMounted = true;
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+
+    const fetchStormTelemetry = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/storms/active`, {
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!isMounted) return;
+
+        const utcTime = json.timestamp_utc
+          ? new Date(json.timestamp_utc).toISOString().slice(11, 16) + " UTC"
+          : "LIVE UTC";
+
+        setTelemetry((prev) => ({
+          stormName: json.storm_name || json.name || prev.stormName,
+          category: json.active_category || prev.category,
+          basin: json.basin || prev.basin,
+          pressureHpa:
+            typeof json.current_state?.pressure_hpa === "number"
+              ? Math.round(json.current_state.pressure_hpa)
+              : prev.pressureHpa,
+          windKmh:
+            typeof json.current_state?.wind_kmh === "number"
+              ? Math.round(json.current_state.wind_kmh)
+              : prev.windKmh,
+          dvorakT: prev.dvorakT,
+          dvorakCI: prev.dvorakCI,
+          orbitalPass: `INSAT-3DR (${utcTime})`,
+        }));
+      } catch {
+        // Retain calibrated baseline silently to prevent UI disruption
+      }
+    };
+
+    fetchStormTelemetry();
+    const interval = setInterval(fetchStormTelemetry, 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <div className="relative z-10 w-full p-6 sm:p-8 flex flex-col justify-between h-full pointer-events-none">
       {/* Top Header Information & Agency Brand */}
@@ -24,8 +91,8 @@ export const StormTelemetryHUD: React.FC = () => {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00E676] opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00E676]" />
           </span>
-          <span className="text-[11px] font-mono font-bold tracking-wider text-[#00F2FE] uppercase">
-            LIVE ORBITAL PASS: INSAT-3DR (08:30 UTC)
+          <span className="text-[11px] font-mono [font-feature-settings:'tnum'_on] font-bold tracking-wider text-[#00F2FE] uppercase">
+            LIVE ORBITAL PASS: {telemetry.orbitalPass}
           </span>
         </div>
 
@@ -75,9 +142,9 @@ export const StormTelemetryHUD: React.FC = () => {
                   Active Threat Telemetry
                 </span>
                 <h3 className="font-orbitron font-extrabold text-lg sm:text-xl text-white tracking-wide flex items-center gap-2">
-                  <span>CYCLONE MOCHA</span>
+                  <span>{telemetry.stormName}</span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FF5E36]/20 border border-[#FF5E36] text-[#FF5E36] font-bold">
-                    VSCS (CAT 4)
+                    {telemetry.category}
                   </span>
                 </h3>
               </div>
@@ -86,7 +153,7 @@ export const StormTelemetryHUD: React.FC = () => {
                   Basin Origin
                 </span>
                 <span className="text-xs font-mono font-bold text-[#00F2FE]">
-                  Bay of Bengal
+                  {telemetry.basin}
                 </span>
               </div>
             </div>
@@ -98,8 +165,8 @@ export const StormTelemetryHUD: React.FC = () => {
                   <Gauge className="w-3.5 h-3.5 text-[#00F2FE]" />
                   <span className="text-[10px] font-mono uppercase">Pressure</span>
                 </div>
-                <div className="text-sm sm:text-base font-mono font-bold text-white">
-                  938 <span className="text-[10px] font-normal text-slate-400">hPa</span>
+                <div className="text-sm sm:text-base font-mono [font-feature-settings:'tnum'_on] font-bold text-white">
+                  {telemetry.pressureHpa} <span className="text-[10px] font-normal text-slate-400">hPa</span>
                 </div>
               </div>
 
@@ -108,8 +175,8 @@ export const StormTelemetryHUD: React.FC = () => {
                   <Wind className="w-3.5 h-3.5 text-[#FF5E36]" />
                   <span className="text-[10px] font-mono uppercase">Max Winds</span>
                 </div>
-                <div className="text-sm sm:text-base font-mono font-bold text-[#FF5E36]">
-                  195 <span className="text-[10px] font-normal text-slate-400">km/h</span>
+                <div className="text-sm sm:text-base font-mono [font-feature-settings:'tnum'_on] font-bold text-[#FF5E36]">
+                  {telemetry.windKmh} <span className="text-[10px] font-normal text-slate-400">km/h</span>
                 </div>
               </div>
 
@@ -118,8 +185,8 @@ export const StormTelemetryHUD: React.FC = () => {
                   <Activity className="w-3.5 h-3.5 text-[#00E676]" />
                   <span className="text-[10px] font-mono uppercase">Dvorak CI</span>
                 </div>
-                <div className="text-sm sm:text-base font-mono font-bold text-[#00E676]">
-                  T6.0 <span className="text-[10px] font-normal text-slate-400">/ CI 6.0</span>
+                <div className="text-sm sm:text-base font-mono [font-feature-settings:'tnum'_on] font-bold text-[#00E676]">
+                  {telemetry.dvorakT} <span className="text-[10px] font-normal text-slate-400">/ {telemetry.dvorakCI}</span>
                 </div>
               </div>
             </div>

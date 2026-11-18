@@ -15,7 +15,8 @@ import os
 import json
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse
+from http.cookies import SimpleCookie
+from urllib.parse import urlparse, parse_qs
 
 # Ensure local imports
 CURRENT_DIR = Path(__file__).resolve().parent
@@ -26,12 +27,37 @@ from core import config
 
 PORT = config.PORT
 HOST = config.HOST
+SESSION_COOKIE_NAME = "cyclo_session"
 
 class CycloAiHttpHandler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin")
+        if origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Credentials", "true")
+            self.send_header("Vary", "Origin")
+        else:
+            self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept")
+
+    def _extract_token(self):
+        auth_header = self.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            return auth_header[7:].strip()
+        cookie_header = self.headers.get("Cookie", "")
+        if cookie_header:
+            cookie = SimpleCookie()
+            cookie.load(cookie_header)
+            if SESSION_COOKIE_NAME in cookie:
+                return cookie[SESSION_COOKIE_NAME].value
+        return None
+
+    def _client_ip(self) -> str:
+        forwarded = self.headers.get("X-Forwarded-For", "")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return self.client_address[0] if self.client_address else "127.0.0.1"
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -41,6 +67,7 @@ class CycloAiHttpHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        query = parse_qs(parsed.query)
 
         if path in ["/", "/health", "/api/v1/health"]:
             self._respond_json(200, routes.get_health())
@@ -63,6 +90,17 @@ class CycloAiHttpHandler(BaseHTTPRequestHandler):
         elif path in ("/api/v1/analyzer/inference", "/api/v1/analyzer/infer"):
             status_code, res = routes.run_analyzer_inference({})
             self._respond_json(status_code, res)
+
+        elif path == "/api/v1/auth/me":
+            status_code, res = routes.auth_me(self._extract_token())
+            self._respond_json(status_code, res)
+
+        elif path == "/api/v1/auth/audit-logs":
+            try:
+                limit = int(query.get("limit", ["50"])[0])
+            except ValueError:
+                limit = 50
+            self._respond_json(200, routes.auth_audit_logs(limit=limit))
 
         else:
             self._respond_json(404, {"error": "Endpoint Not Found", "path": path})
@@ -87,15 +125,37 @@ class CycloAiHttpHandler(BaseHTTPRequestHandler):
             status_code, res = routes.run_forecast_prediction(payload)
             self._respond_json(status_code, res)
 
+        elif path == "/api/v1/auth/register":
+            status_code, res, token, ttl = routes.auth_register(payload, client_ip=self._client_ip())
+            extra_headers = []
+            if token:
+                extra_headers.append(("Set-Cookie", f"{SESSION_COOKIE_NAME}={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={ttl}"))
+            self._respond_json(status_code, res, extra_headers=extra_headers)
+
+        elif path == "/api/v1/auth/login":
+            status_code, res, token, ttl = routes.auth_login(payload, client_ip=self._client_ip())
+            extra_headers = []
+            if token:
+                extra_headers.append(("Set-Cookie", f"{SESSION_COOKIE_NAME}={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={ttl}"))
+            self._respond_json(status_code, res, extra_headers=extra_headers)
+
+        elif path == "/api/v1/auth/logout":
+            status_code, res = routes.auth_logout(self._extract_token(), client_ip=self._client_ip())
+            extra_headers = [("Set-Cookie", f"{SESSION_COOKIE_NAME}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0")]
+            self._respond_json(status_code, res, extra_headers=extra_headers)
+
         else:
             self._respond_json(404, {"error": "Endpoint Not Found", "path": path})
 
-    def _respond_json(self, status: int, data: dict):
+    def _respond_json(self, status: int, data: dict, extra_headers: list | None = None):
         body = json.dumps(data).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self._send_cors_headers()
+        if extra_headers:
+            for k, v in extra_headers:
+                self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
@@ -117,6 +177,11 @@ def run_server():
     print(f"  • Satellite Feed:   GET  http://localhost:{PORT}/api/v1/satellite/realtime-feed")
     print(f"  • Analyzer Model 1: POST http://localhost:{PORT}/api/v1/analyzer/inference")
     print(f"  • Forecast Model 2: POST http://localhost:{PORT}/api/v1/forecast/predict")
+    print(f"  • Auth Register:    POST http://localhost:{PORT}/api/v1/auth/register")
+    print(f"  • Auth Login:       POST http://localhost:{PORT}/api/v1/auth/login")
+    print(f"  • Auth Session:     GET  http://localhost:{PORT}/api/v1/auth/me")
+    print(f"  • Auth Logout:      POST http://localhost:{PORT}/api/v1/auth/logout")
+    print(f"  • Auth Audit Logs:  GET  http://localhost:{PORT}/api/v1/auth/audit-logs")
     print("-" * 75)
     print("Anti-Hallucination Guardrails: ACTIVE (Atkinson-Holliday, PINN Kinematic Bounds)")
     print("=" * 75)

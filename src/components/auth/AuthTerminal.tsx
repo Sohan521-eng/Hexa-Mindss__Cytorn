@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Mail, 
@@ -12,12 +12,16 @@ import {
   Satellite, 
   KeyRound,
   ArrowRight,
-  Check
+  Check,
+  AlertTriangle,
+  CheckCircle2,
+  Info
 } from "lucide-react";
 import Noise from "@/components/ui/Noise";
 import { ScientistPillButton } from "@/components/ui/ScientistPillButton";
+import { evaluatePasswordStrength, type AuthRole } from "@/lib/auth/rbac";
 
-type AuthRole = "scientist" | "disaster" | "public" | "admin";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 interface AuthTerminalProps {
   initialMode?: "signin" | "register";
@@ -36,6 +40,12 @@ export const AuthTerminal: React.FC<AuthTerminalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
+  const [suggestedRole, setSuggestedRole] = useState<AuthRole | null>(null);
+
+  const passwordStrength = useMemo(() => evaluatePasswordStrength(password), [password]);
 
   const roles = [
     { id: "scientist" as AuthRole, label: "Scientist", icon: Satellite, path: "/satellite-analyzer" },
@@ -44,15 +54,71 @@ export const AuthTerminal: React.FC<AuthTerminalProps> = ({
     { id: "admin" as AuthRole, label: "Admin", icon: KeyRound, path: "/settings" },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const clearFeedback = () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setInfoMsg(null);
+    setSuggestedRole(null);
+  };
+
+  const handleModeSwitch = (nextMode: "signin" | "register") => {
+    setMode(nextMode);
+    clearFeedback();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
+    clearFeedback();
+
+    if (mode === "register" && !passwordStrength.valid) {
+      setErrorMsg(passwordStrength.reason);
+      return;
+    }
+
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      const endpoint = mode === "signin" ? "/auth/login" : "/auth/register";
+      const payload =
+        mode === "signin"
+          ? { email, password, role, rememberMe }
+          : { name, email, password, role, badgeId: role === "public" ? "" : badgeId, rememberMe };
+
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setErrorMsg(data.message || "Authentication failed. Please verify your credentials.");
+        if (data.code === "ROLE_CLEARANCE_DENIED" && data.assigned_role) {
+          setSuggestedRole(data.assigned_role as AuthRole);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      const tier = data.user?.clearance_tier ?? 4;
+      setSuccessMsg(
+        data.message || `Identity verified • Tier ${tier} Clearance active.`
+      );
+      const target = data.redirect_to || roles.find((r) => r.id === role)?.path || "/dashboard";
+
+      setTimeout(() => {
+        router.push(target);
+      }, 320);
+    } catch {
+      setErrorMsg("Unable to reach authentication gateway. Please retry.");
       setIsLoading(false);
-      const target = roles.find((r) => r.id === role)?.path || "/dashboard";
-      router.push(target);
-    }, 450);
+    }
   };
 
   return (
@@ -90,7 +156,7 @@ export const AuthTerminal: React.FC<AuthTerminalProps> = ({
           >
             <button
               type="button"
-              onClick={() => setMode("signin")}
+              onClick={() => handleModeSwitch("signin")}
               className={`flex-1 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 mode === "signin"
                   ? "bg-[#00F2FE]/15 border border-[#00F2FE]/70 text-[#00F2FE] shadow-[0_0_8px_rgba(0,242,254,0.25)]"
@@ -101,7 +167,7 @@ export const AuthTerminal: React.FC<AuthTerminalProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setMode("register")}
+              onClick={() => handleModeSwitch("register")}
               className={`flex-1 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 mode === "register"
                   ? "bg-[#00F2FE]/15 border border-[#00F2FE]/70 text-[#00F2FE] shadow-[0_0_8px_rgba(0,242,254,0.25)]"
@@ -125,7 +191,11 @@ export const AuthTerminal: React.FC<AuthTerminalProps> = ({
                   <ScientistPillButton
                     key={r.id}
                     type="button"
-                    onClick={() => setRole(r.id)}
+                    onClick={() => {
+                      setRole(r.id);
+                      setErrorMsg(null);
+                      setSuggestedRole(null);
+                    }}
                     className={`!min-w-0 !w-full !h-14 !p-0 !rounded-xl !justify-center transition-all ${
                       isSelected
                         ? "scientist-pill"
@@ -170,6 +240,52 @@ export const AuthTerminal: React.FC<AuthTerminalProps> = ({
               })}
             </div>
           </div>
+
+          {/* Inline Auth Status / Security Feedback */}
+          {errorMsg && (
+            <div
+              role="alert"
+              className="rounded-xl px-3 py-2.5 bg-[#FF5E36]/15 border border-[#FF5E36]/60 text-xs font-mono text-[#FFB4A2] flex flex-col gap-1.5"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-[#FF5E36] shrink-0 mt-0.5" />
+                <span className="leading-snug">{errorMsg}</span>
+              </div>
+              {suggestedRole && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRole(suggestedRole);
+                    setErrorMsg(null);
+                    setSuggestedRole(null);
+                  }}
+                  className="self-start text-[11px] font-rajdhani font-bold uppercase tracking-wider text-[#00F2FE] hover:underline cursor-pointer pl-5"
+                >
+                  Switch to assigned role ({roles.find((r) => r.id === suggestedRole)?.label || suggestedRole}) &rarr;
+                </button>
+              )}
+            </div>
+          )}
+
+          {successMsg && (
+            <div
+              role="status"
+              className="rounded-xl px-3 py-2.5 bg-[#10E7A2]/15 border border-[#10E7A2]/60 text-xs font-mono text-[#10E7A2] flex items-center gap-2"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {infoMsg && (
+            <div
+              role="status"
+              className="rounded-xl px-3 py-2.5 bg-[#00F2FE]/10 border border-[#00F2FE]/45 text-xs font-mono text-[#00F2FE] flex items-start gap-2"
+            >
+              <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span className="leading-snug">{infoMsg}</span>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3.5">
@@ -225,7 +341,10 @@ export const AuthTerminal: React.FC<AuthTerminalProps> = ({
                 {mode === "signin" && (
                   <button
                     type="button"
-                    onClick={() => alert("Please contact your IMD/NDMA System Administrator to reset your password.")}
+                    onClick={() => {
+                      setErrorMsg(null);
+                      setInfoMsg("Contact your IMD / NDMA EOC System Administrator to initiate a clearance override reset.");
+                    }}
                     className="text-[11px] font-mono text-[#00F2FE] hover:underline cursor-pointer relative -translate-y-1"
                   >
                     Forgot?
@@ -254,6 +373,49 @@ export const AuthTerminal: React.FC<AuthTerminalProps> = ({
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {mode === "register" && password.length > 0 && (
+                <div className="mt-1.5 space-y-1">
+                  <div className="grid grid-cols-4 gap-1">
+                    {[1, 2, 3, 4].map((seg) => {
+                      const active = passwordStrength.score >= seg;
+                      const color =
+                        passwordStrength.score >= 4
+                          ? "#10E7A2"
+                          : passwordStrength.score === 3
+                          ? "#00F2FE"
+                          : passwordStrength.score === 2
+                          ? "#F59E0B"
+                          : "#FF5E36";
+                      return (
+                        <div
+                          key={seg}
+                          className="h-1 rounded-full transition-colors duration-200"
+                          style={{
+                            backgroundColor: active ? color : "rgba(30, 50, 82, 0.7)",
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] font-mono [font-feature-settings:'tnum'_on]">
+                    <span className="text-slate-400">Entropy:</span>
+                    <span
+                      style={{
+                        color:
+                          passwordStrength.score >= 4
+                            ? "#10E7A2"
+                            : passwordStrength.score === 3
+                            ? "#00F2FE"
+                            : passwordStrength.score === 2
+                            ? "#F59E0B"
+                            : "#FF5E36",
+                      }}
+                    >
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Optional badge ID for officers */}
@@ -333,7 +495,7 @@ export const AuthTerminal: React.FC<AuthTerminalProps> = ({
                 Need agency credentials?{" "}
                 <button
                   type="button"
-                  onClick={() => setMode("register")}
+                  onClick={() => handleModeSwitch("register")}
                   className="text-[#00F2FE] hover:underline font-bold cursor-pointer"
                 >
                   Register
@@ -344,7 +506,7 @@ export const AuthTerminal: React.FC<AuthTerminalProps> = ({
                 Already have credentials?{" "}
                 <button
                   type="button"
-                  onClick={() => setMode("signin")}
+                  onClick={() => handleModeSwitch("signin")}
                   className="text-[#00F2FE] hover:underline font-bold cursor-pointer"
                 >
                   Sign In
